@@ -18,7 +18,9 @@ func main() {
 	r.Use(middleware.Recoverer)
 	var loginRouter login.UserAuthRouter
 
-	loginRouter.LoginUser = gameInstance.AddPlayer
+	loginRouter.LoginUser = func(username string) (login.UserAddWebSocketInterface, error) {
+		return gameInstance.AddPlayer(username)
+	}
 	r.Post("/login", loginRouter.ManageRequest)
 	http.ListenAndServe(":3000", r)
 }

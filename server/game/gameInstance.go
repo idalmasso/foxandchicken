@@ -7,18 +7,20 @@ import (
 
 type GameInstance struct {
 	Rooms   map[string]GameRoom
-	Players map[string]bool
+	Players map[string]*Player
 	mutex   sync.Mutex
 }
 
-func (instance *GameInstance) AddPlayer(username string) (string, error) {
+func (instance *GameInstance) AddPlayer(username string) (*Player, error) {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
 	if _, ok := instance.Players[username]; ok {
-		return "", fmt.Errorf("already exists")
+		return nil, fmt.Errorf("already exists")
 	}
-	instance.Players[username] = true
-	return username, nil
+	var p Player
+	p.Username = username
+	instance.Players[username] = &p
+	return &p, nil
 }
 
 func (instance *GameInstance) RemovePlayer(username string) {
@@ -29,7 +31,7 @@ func (instance *GameInstance) RemovePlayer(username string) {
 
 func NewInstance() *GameInstance {
 	var gameInstance GameInstance
-	gameInstance.Players = make(map[string]bool)
+	gameInstance.Players = make(map[string]*Player)
 	gameInstance.Rooms = make(map[string]GameRoom)
 	return &gameInstance
 }
