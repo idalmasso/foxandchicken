@@ -6,7 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/idalmasso/foxandchicken/server/game"
-	"github.com/idalmasso/foxandchicken/server/login"
+	"github.com/idalmasso/foxandchicken/server/gameserver"
 )
 
 func main() {
@@ -16,11 +16,8 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	var loginRouter login.UserAuthRouter
-
-	loginRouter.LoginUser = func(username string) (login.UserAddWebSocketInterface, error) {
-		return gameInstance.AddPlayer(username)
-	}
-	r.Post("/login", loginRouter.ManageRequest)
+	var webServer gameserver.GameServer
+	webServer.Instance = gameInstance
+	r.Get("/login", webServer.ManageRequest)
 	http.ListenAndServe(":3000", r)
 }
