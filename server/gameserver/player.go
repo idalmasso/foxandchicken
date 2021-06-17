@@ -19,11 +19,31 @@ func (p *Player) UpdateWebSocket(conn *websocket.Conn) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	p.Conn = conn
-	go p.ReceiveMessages()
+	go p.PlayerCycle()
 }
 
-func (p *Player) ReceiveMessages() {
-	//Read username
+func (p *Player) PlayerCycle() {
+	p.ReadUsername()
+
+	type message struct {
+		Message string `json:"message"`
+	}
+	var mex message
+	for {
+		if err := p.Conn.ReadJSON(&mex); err != nil {
+
+			fmt.Println("ERROR "+p.GameData.Username, "Cannot decode the chat message", err.Error())
+			p.Conn.Close()
+			p.GameInstance.RemovePlayer(p.GameData.Username)
+			return
+		}
+		fmt.Println("Received message " + mex.Message + " from user " + p.GameData.Username)
+	}
+
+}
+
+//ReadUsername block the user until an ok username is inserted
+func (p *Player) ReadUsername() {
 	type usernameMessage struct {
 		Username string `json:"username"`
 	}
@@ -48,19 +68,4 @@ func (p *Player) ReceiveMessages() {
 			p.Conn.WriteJSON(struct{ message string }{message: "Error: not empty"})
 		}
 	}
-	type message struct {
-		Message string `json:"message"`
-	}
-	var mex message
-	for {
-		if err := p.Conn.ReadJSON(&mex); err != nil {
-
-			fmt.Println("ERROR "+p.GameData.Username, "Cannot decode the chat message", err.Error())
-			p.Conn.Close()
-			p.GameInstance.RemovePlayer(p.GameData.Username)
-			return
-		}
-		fmt.Println("Received message " + mex.Message + " from user " + p.GameData.Username)
-	}
-
 }

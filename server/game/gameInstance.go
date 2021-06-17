@@ -6,9 +6,11 @@ import (
 )
 
 type GameInstance struct {
-	Rooms   map[string]GameRoom
-	Players map[string]*PlayerGameData
-	mutex   sync.Mutex
+	Rooms              map[string]GameRoom
+	Players            map[string]*PlayerGameData
+	mutex              sync.Mutex
+	waitingRoom        *WaitingRoom
+	PlayerDataChannels map[string]chan PlayerGameData
 }
 
 func (instance *GameInstance) AddPlayer(username string) (*PlayerGameData, error) {
