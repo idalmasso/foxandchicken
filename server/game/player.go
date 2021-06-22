@@ -1,10 +1,12 @@
 package game
 
+import "github.com/idalmasso/foxandchicken/server/game/common"
+
 type PlayerGameData struct {
 	CharacterType int
 	Username      string `json:"username"`
-	Position      Vector2
+	Position      common.Vector2
 	Rotation      float32
-	Velocity      Vector2
+	Velocity      common.Vector2
 	SizeRadius    float32
 }

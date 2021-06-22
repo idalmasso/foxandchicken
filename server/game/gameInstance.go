@@ -2,7 +2,11 @@ package game
 
 import (
 	"fmt"
+	"log"
 	"sync"
+	"time"
+
+	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
 
 type GameInstance struct {
@@ -10,7 +14,8 @@ type GameInstance struct {
 	Players            map[string]*PlayerGameData
 	mutex              sync.Mutex
 	waitingRoom        *WaitingRoom
-	PlayerDataChannels map[string]chan PlayerGameData
+	PlayerDataChannels map[string]chan<- messaging.MessageValue
+	InputChannel       <-chan messaging.MessageValue
 }
 
 func (instance *GameInstance) AddPlayer(username string) (*PlayerGameData, error) {
@@ -36,4 +41,41 @@ func NewInstance() *GameInstance {
 	gameInstance.Players = make(map[string]*PlayerGameData)
 	gameInstance.Rooms = make(map[string]GameRoom)
 	return &gameInstance
+}
+
+func (g *GameInstance) GameInstanceRun() {
+	for {
+		if len(g.Players) != 0 {
+			select {
+			case val := <-g.InputChannel:
+				switch val.GetMessageType() {
+				case messaging.MessageOkOrError:
+					log.Println("should not be here")
+					break
+				case messaging.MessageTypeCreateRoom:
+					var message *messaging.CommMessageCreateRoom
+					message = val.(*messaging.CommMessageCreateRoom)
+					if p, ok := g.PlayerDataChannels[message.Player]; ok {
+						var okMessage messaging.CommMessageOkOrError
+						okMessage.Message = "ok!"
+						p <- &okMessage
+					}
+					break
+				case messaging.MessageTypeDeleteRoom:
+					var message *messaging.CommMessageDeleteRoom
+					message = val.(*messaging.CommMessageDeleteRoom)
+					if p, ok := g.PlayerDataChannels[message.Player]; ok {
+						var okMessage messaging.CommMessageOkOrError
+						okMessage.Message = "ok!"
+						p <- &okMessage
+					}
+					break
+				}
+				break
+			}
+		} else {
+			time.Sleep(time.Second)
+		}
+
+	}
 }
