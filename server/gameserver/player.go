@@ -3,10 +3,29 @@ package gameserver
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/idalmasso/foxandchicken/server/game"
 )
+type actionMessageTypes string
+const (
+	ActionMessageCreateRoom actionMessageTypes = "CREATEROOM"
+	ActionMessageDeleteRoom actionMessageTypes = "DELETEROOM"
+	ActionMessageJoinRoom actionMessageTypes = "JOINROOM"
+)
+type usernameMessage struct {
+	Username string `json:"username"`
+}
+
+type message struct {
+	Action actionMessageTypes `json:"action"`
+	Message string `json:"message"`
+}
+
+type singleStringReturnMessage struct {
+	Message  string `json:"message"`
+}
 
 type Player struct {
 	GameData     *game.PlayerGameData `json:"data"`
@@ -24,19 +43,33 @@ func (p *Player) UpdateWebSocket(conn *websocket.Conn) {
 
 func (p *Player) PlayerCycle() {
 	p.ReadUsername()
-
-	type message struct {
-		Message string `json:"message"`
-	}
 	var mex message
 	for {
+		p.Conn.SetReadDeadline(time.Now().Add(5*time.Minute))
 		if err := p.Conn.ReadJSON(&mex); err != nil {
-
-			fmt.Println("ERROR "+p.GameData.Username, "Cannot decode the chat message", err.Error())
+			fmt.Println("ERROR "+p.GameData.Username, "cannot decode the message", err.Error())
 			p.Conn.Close()
 			p.GameInstance.RemovePlayer(p.GameData.Username)
 			return
 		}
+		switch mex.Action{
+		case ActionMessageCreateRoom:
+			if err:=p.tryCreateRoom(mex.Message);err!=nil{
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: err.Error()})
+			} else {
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
+			}
+		case ActionMessageDeleteRoom:
+			if err:=p.tryDeleteRoom(mex.Message);err!=nil{
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: err.Error()})
+			} else {
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
+			}
+		default:
+			p.Conn.WriteJSON(singleStringReturnMessage{Message: "action not recognized"})
+		}
+		 
+
 		fmt.Println("Received message " + mex.Message + " from user " + p.GameData.Username)
 	}
 
@@ -44,28 +77,24 @@ func (p *Player) PlayerCycle() {
 
 //ReadUsername block the user until an ok username is inserted
 func (p *Player) ReadUsername() {
-	type usernameMessage struct {
-		Username string `json:"username"`
-	}
 	var u usernameMessage
 	ok := false
 	for !ok {
+		p.Conn.SetReadDeadline(time.Now().Add(5*time.Minute))
 		err := p.Conn.ReadJSON(&u)
 		if err != nil {
-			p.Conn.WriteJSON(struct{ message string }{message: "Error: " + err.Error()})
-			p.Conn.Close()
-			return
-		}
-		if u.Username != "" {
+			p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
+		} else if u.Username != "" {
 			p.GameData, err = p.GameInstance.AddPlayer(u.Username)
 			if err == nil {
 				ok = true
-				p.Conn.WriteJSON(struct{ message string }{message: "OK"})
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
 			} else {
-				p.Conn.WriteJSON(struct{ message string }{message: "Error: " + err.Error()})
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "requested message: username:<'username'> error: " + err.Error()})
 			}
 		} else {
-			p.Conn.WriteJSON(struct{ message string }{message: "Error: not empty"})
+			p.Conn.WriteJSON(singleStringReturnMessage{Message: "requested message: username:<'username'> error:  empty username"})
 		}
+	
 	}
 }

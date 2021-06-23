@@ -18,6 +18,7 @@ func main() {
 	r.Use(middleware.Recoverer)
 	var webServer gameserver.GameServer
 	webServer.Instance = gameInstance
+	go gameInstance.GameInstanceRun()
 	r.Get("/login", webServer.ManageRequest)
 	http.ListenAndServe(":3000", r)
 }

@@ -14,8 +14,8 @@ type GameInstance struct {
 	Players            map[string]*PlayerGameData
 	mutex              sync.Mutex
 	waitingRoom        *WaitingRoom
-	PlayerDataChannels map[string]chan<- messaging.MessageValue
-	InputChannel       <-chan messaging.MessageValue
+	PlayerDataChannels map[string]chan messaging.MessageValue
+	InputChannel       chan messaging.MessageValue
 }
 
 func (instance *GameInstance) AddPlayer(username string) (*PlayerGameData, error) {
@@ -27,6 +27,7 @@ func (instance *GameInstance) AddPlayer(username string) (*PlayerGameData, error
 	var p PlayerGameData
 	p.Username = username
 	instance.Players[username] = &p
+	instance.PlayerDataChannels[username] = make(chan messaging.MessageValue)
 	return &p, nil
 }
 
@@ -34,12 +35,15 @@ func (instance *GameInstance) RemovePlayer(username string) {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
 	delete(instance.Players, username)
+	delete(instance.PlayerDataChannels, username)
 }
 
 func NewInstance() *GameInstance {
 	var gameInstance GameInstance
 	gameInstance.Players = make(map[string]*PlayerGameData)
 	gameInstance.Rooms = make(map[string]GameRoom)
+	gameInstance.InputChannel = make(chan messaging.MessageValue)
+	gameInstance.PlayerDataChannels = make(map[string]chan messaging.MessageValue)
 	return &gameInstance
 }
 
@@ -57,7 +61,7 @@ func (g *GameInstance) GameInstanceRun() {
 					message = val.(*messaging.CommMessageCreateRoom)
 					if p, ok := g.PlayerDataChannels[message.Player]; ok {
 						var okMessage messaging.CommMessageOkOrError
-						okMessage.Message = "ok!"
+						okMessage.Message = ""
 						p <- &okMessage
 					}
 					break
@@ -66,7 +70,7 @@ func (g *GameInstance) GameInstanceRun() {
 					message = val.(*messaging.CommMessageDeleteRoom)
 					if p, ok := g.PlayerDataChannels[message.Player]; ok {
 						var okMessage messaging.CommMessageOkOrError
-						okMessage.Message = "ok!"
+						okMessage.Message = ""
 						p <- &okMessage
 					}
 					break
