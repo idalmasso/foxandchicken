@@ -2,6 +2,7 @@ package gameserver
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -35,6 +36,7 @@ type Player struct {
 	GameData     *game.PlayerGameData `json:"data"`
 	GameInstance *game.GameInstance
 	RoomChannel  chan<- messaging.RoomMessageValue
+	IsInRoom     bool
 	mutex        sync.Mutex
 	Conn         *websocket.Conn
 }
@@ -52,7 +54,7 @@ func (p *Player) PlayerCycle() {
 	for {
 		p.Conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 		if err := p.Conn.ReadJSON(&mex); err != nil {
-			fmt.Println("ERROR "+p.GameData.Username, "cannot decode the message", err.Error())
+			log.Println("ERROR "+p.GameData.Username, "cannot decode the message", err.Error())
 			p.Conn.Close()
 			p.GameInstance.RemovePlayer(p.GameData.Username)
 			return
@@ -63,12 +65,20 @@ func (p *Player) PlayerCycle() {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: err.Error()})
 			} else {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
+				p.PlayerRoomGameCycle()
 			}
 		case ActionMessageLeaveRoom:
 			if err := p.tryLeaveRoom(); err != nil {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: err.Error()})
 			} else {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
+			}
+		case ActionMessageJoinRoom:
+			if err := p.tryJoinRoom(mex.Message); err != nil {
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: err.Error()})
+			} else {
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
+				p.PlayerRoomGameCycle()
 			}
 		default:
 			p.Conn.WriteJSON(singleStringReturnMessage{Message: "action not recognized"})

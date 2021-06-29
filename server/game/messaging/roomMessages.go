@@ -1,7 +1,11 @@
 package messaging
 
+import "github.com/idalmasso/foxandchicken/server/game/common"
+
 type CommRoomMessageMovePlayer struct {
-	Player string
+	Player             string
+	Position, Velocity common.Vector2
+	Rotation           float32
 }
 
 func (m *CommRoomMessageMovePlayer) ErrorMessage() string {
@@ -13,6 +17,7 @@ func (m *CommRoomMessageMovePlayer) GetMessageType() MessageType {
 
 type CommRoomMessageJoinPlayer struct {
 	Player string
+	Name   string
 }
 
 func (m *CommRoomMessageJoinPlayer) GetMessageType() MessageType {
