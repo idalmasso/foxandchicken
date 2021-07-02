@@ -30,8 +30,7 @@ func (gameServer GameServer) ManageRequest(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var p Player
-	p.GameInstance = gameServer.Instance
+	p := NewPlayer(gameServer.Instance)
 
 	if err != nil {
 		ws.Close()
