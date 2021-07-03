@@ -3,9 +3,10 @@ package messaging
 import "github.com/idalmasso/foxandchicken/server/game/common"
 
 type CommRoomMessageMovePlayer struct {
-	Player             string
-	Position, Velocity common.Vector2
-	Rotation           float32
+	Player             string `json:"player"`
+	Position common.Vector2 `json:"position"`
+	Velocity common.Vector2  `json:"velocity"`
+	Rotation           float32 `json:"rotation"`
 }
 
 func (m *CommRoomMessageMovePlayer) ErrorMessage() string {
@@ -14,7 +15,14 @@ func (m *CommRoomMessageMovePlayer) ErrorMessage() string {
 func (m *CommRoomMessageMovePlayer) GetMessageType() MessageType {
 	return RoomMessageTypeMovePlayer
 }
+type CommRoomMessagePlayersMovement []CommRoomMessageMovePlayer
 
+func (m *CommRoomMessagePlayersMovement) ErrorMessage() string {
+	return ""
+}
+func (m *CommRoomMessagePlayersMovement) GetMessageType() MessageType {
+	return RoomMessageTypePlayersMovment
+}
 type CommRoomMessageJoinPlayer struct {
 	Player string
 	Name   string

@@ -1,7 +1,8 @@
 package common
 
 type Vector2 struct {
-	X, Y float32
+	X float32 `json:"x"`
+	Y float32 `json:"y"`
 }
 
 func VectorSum(v1, v2 Vector2) Vector2 {

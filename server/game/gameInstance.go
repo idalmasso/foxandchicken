@@ -115,8 +115,8 @@ func (g *GameInstance) GameInstanceRun() {
 					} else {
 						log.Println("Player", message.Player, "joined room", room.Name)
 						room.mutex.Lock()
-						if roomExists, ok := g.Players[message.Player]; ok {
-							if roomExists == "" {
+						if roomOfPlayer, ok := g.Players[message.Player]; ok {
+							if roomOfPlayer == "" {
 								room.broadcastMessage(message)
 								p := PlayerGameData{Username: message.Player}
 								room.Players[message.Player] = &p
@@ -127,8 +127,8 @@ func (g *GameInstance) GameInstanceRun() {
 								delete(g.PlayersWaiting, message.Player)
 								g.Players[message.Player] = room.Name
 								g.mutex.Unlock()
-							} else if roomExists != message.Name {
-								r.Message = "already in room " + roomExists
+							} else if roomOfPlayer != message.Name {
+								r.Message = "already in room " + roomOfPlayer
 							}
 						}
 						g.PlayerDataChannels[message.Player] <- &r

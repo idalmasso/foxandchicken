@@ -77,11 +77,11 @@ func (p *Player) PlayerRoomGameCycle() {
 			close(p.RoomChannel)
 			return
 		case v := <-p.RoomChannelOutput:
-			if v.GetMessageType() == messaging.RoomMessageTypeMovePlayer {
+			if v.GetMessageType() == messaging.RoomMessageTypePlayersMovment {
 				p.mutex.Lock()
-				move := v.(*messaging.CommRoomMessageMovePlayer)
-				log.Println("received message move>", move.Player)
-				p.RoomChannel <- &messaging.CommRoomMessageMovePlayer{Player: p.username, Position: common.Vector2{X: move.Position.X, Y: move.Position.Y}}
+				move := v.(*messaging.CommRoomMessagePlayersMovement)
+				//log.Println("received message move>", move.Player)
+				p.Conn.WriteJSON(move)  
 				p.mutex.Unlock()
 
 			}
