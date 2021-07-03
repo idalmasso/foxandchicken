@@ -11,25 +11,8 @@ import (
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
 
-type actionMessageTypes string
-
-const (
-	ActionMessageCreateRoom actionMessageTypes = "CREATEROOM"
-	ActionMessageLeaveRoom  actionMessageTypes = "LEAVEROOM"
-	ActionMessageJoinRoom   actionMessageTypes = "JOINROOM"
-)
-
 type usernameMessage struct {
 	Username string `json:"username"`
-}
-
-type message struct {
-	Action  actionMessageTypes `json:"action"`
-	Message string             `json:"message"`
-}
-
-type singleStringReturnMessage struct {
-	Message string `json:"message"`
 }
 
 type Player struct {

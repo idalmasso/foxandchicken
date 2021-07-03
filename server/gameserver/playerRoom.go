@@ -9,14 +9,7 @@ import (
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
 
-type movemementMessage struct {
-	Action    actionMessageTypes `json:"action"`
-	PositionX float32            `json:"position_x"`
-	PositionY float32            `json:"position_y"`
-	VelocityX float32            `json:"velocity_x"`
-	VelocityY float32            `json:"velocity_y"`
-	Rotation  float32            `json:"rotation"`
-}
+
 
 func (p *Player) sendAndReturnErrorRoom(m messaging.RoomMessageValue, acceptedType messaging.MessageType) (messaging.RoomMessageValue, error) {
 	p.RoomChannel <- m
@@ -31,7 +24,7 @@ func (p *Player) sendAndReturnErrorRoom(m messaging.RoomMessageValue, acceptedTy
 }
 
 func (p *Player) PlayerRoomInputCycle() error {
-	var mex message
+	var mex actionMessage
 	go p.PlayerRoomGameCycle()
 	for {
 		p.Conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
@@ -45,7 +38,7 @@ func (p *Player) PlayerRoomInputCycle() error {
 		if !p.IsInRoom {
 			return nil
 		}
-		switch mex.Action {
+		switch mex.GetAction() {
 		case ActionMessageLeaveRoom:
 			if err := p.tryLeaveRoom(); err != nil {
 				p.mutex.Lock()
@@ -60,6 +53,15 @@ func (p *Player) PlayerRoomInputCycle() error {
 				p.mutex.Unlock()
 				return nil
 			}
+		case ActionMessageMovement:
+			m:=mex.(*movemementMessage)
+			p.mutex.Lock()
+			position := common.Vector2{X: m.PositionX, Y: m.PositionY}
+			velocity := common.Vector2{X: m.VelocityX, Y: m.VelocityY}
+			
+			sMex:=messaging.CommRoomMessageMovePlayer{Player: p.username,Position: position, Velocity: velocity , Rotation: m.Rotation}
+			p.RoomChannel<-&sMex
+			p.mutex.Unlock()
 		default:
 			p.mutex.Lock()
 			p.Conn.WriteJSON(singleStringReturnMessage{Message: "action not recognized"})
@@ -72,6 +74,7 @@ func (p *Player) PlayerRoomGameCycle() {
 	for {
 		select {
 		case <-p.EndGameChannel:
+			close(p.RoomChannel)
 			return
 		case v := <-p.RoomChannelOutput:
 			if v.GetMessageType() == messaging.RoomMessageTypeMovePlayer {
@@ -85,4 +88,14 @@ func (p *Player) PlayerRoomGameCycle() {
 
 		}
 	}
+}
+
+func (p *Player) tryLeaveRoom() error {
+	var m messaging.CommRoomMessageLeftPlayer
+	m.Player = p.username
+	_, err := p.sendAndReturnError(&m, messaging.MessageResponse)
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.IsInRoom = false
+	return err
 }
