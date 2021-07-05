@@ -77,7 +77,7 @@ func (p *Player) PlayerRoomGameCycle() {
 			close(p.RoomChannel)
 			return
 		case v := <-p.RoomChannelOutput:
-			if v.GetMessageType() == messaging.RoomMessageTypePlayersMovment {
+			if v.GetMessageType() == messaging.RoomMessageTypePlayersMovement {
 				p.mutex.Lock()
 				moves := v.(*messaging.CommRoomMessagePlayersMovement)
 				//log.Println("received message move>", move.Player)

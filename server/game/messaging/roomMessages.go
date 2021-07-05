@@ -21,7 +21,7 @@ func (m *CommRoomMessagePlayersMovement) ErrorMessage() string {
 	return ""
 }
 func (m *CommRoomMessagePlayersMovement) GetMessageType() MessageType {
-	return RoomMessageTypePlayersMovment
+	return RoomMessageTypePlayersMovement
 }
 type CommRoomMessageJoinPlayer struct {
 	Player string

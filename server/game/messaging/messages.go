@@ -9,7 +9,7 @@ const (
 	MessageResponseCreateRoom
 	MessageResponseJoinRoom
 	RoomMessageTypeMovePlayer
-	RoomMessageTypePlayersMovment
+	RoomMessageTypePlayersMovement
 	RoomMessageTypeJoinPlayer
 	RoomMessageTypeLeftPlayer
 	RoomMessageTypeResponseMessage
