@@ -88,9 +88,7 @@ func (g *GameInstance) GameInstanceRun() {
 								room := createRoom(message.Name, g)
 								g.Rooms[room.Name] = room
 								okMessage.RoomChannel = room.RoomInputChannel
-								player := PlayerGameData{Username: message.Player}
-								room.Players[message.Player] = &player
-								room.RoomOutputChannels[message.Player] = make(chan messaging.RoomMessageValue)
+								room.AddPlayer(message.Player)
 								okMessage.RoomResponseChannel = room.RoomOutputChannels[message.Player]
 								delete(g.PlayersWaiting, message.Player)
 								g.Players[message.Player] = room.Name
@@ -118,9 +116,7 @@ func (g *GameInstance) GameInstanceRun() {
 						if roomOfPlayer, ok := g.Players[message.Player]; ok {
 							if roomOfPlayer == "" {
 								room.broadcastMessage(message)
-								p := PlayerGameData{Username: message.Player}
-								room.Players[message.Player] = &p
-								room.RoomOutputChannels[message.Player] = make(chan messaging.RoomMessageValue)
+								room.AddPlayer(message.Player)
 								r.RoomResponseChannel = room.RoomOutputChannels[message.Player]
 								r.RoomChannel = room.RoomInputChannel
 								g.mutex.Lock()

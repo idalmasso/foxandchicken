@@ -40,14 +40,16 @@ func (g *GameRoom) Run() {
 		}
 		select {
 		case val := <-g.RoomInputChannel:
-			switch val.GetMessageType() {
+			if val != nil {
+				switch val.GetMessageType() {
 
-			case messaging.RoomMessageTypeMovePlayer:
-				m := val.(*messaging.CommRoomMessageMovePlayer)
-				//todo: Remove this line
-				log.Println("Player", m.Player, "move in room", g.Name)
-				g.movePlayer(m)
+				case messaging.RoomMessageTypeMovePlayer:
+					m := val.(*messaging.CommRoomMessageMovePlayer)
+					//todo: Remove this line
+					log.Println("Player", m.Player, "move in room", g.Name)
+					g.movePlayer(m)
 
+				}
 			}
 		default:
 			g.gameCycle()
@@ -57,12 +59,12 @@ func (g *GameRoom) Run() {
 }
 
 func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
-	log.Printf("room %s broadcast %T", g.Name, message.GetMessageType())
+	//log.Printf("room %s broadcast %T", g.Name, message.GetMessageType())
 	g.Instance.mutex.Lock()
 	defer g.Instance.mutex.Unlock()
 	for p := range g.Players {
-		log.Println("---Send message to", p)
-		//g.RoomOutputChannels[p] <- message
+		//log.Println("---Send message to", p)
+		g.RoomOutputChannels[p] <- message
 	}
 }
 
@@ -70,13 +72,19 @@ func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 func (g *GameRoom) gameCycle() {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	for _, p := range g.Players {
+	message := make(messaging.CommRoomMessagePlayersMovement, len(g.Players))
+	i := 0
+
+	for username, p := range g.Players {
 		var m messaging.CommRoomMessageMovePlayer
 		m.Position = p.Position
 		m.Rotation = p.Rotation
 		m.Velocity = p.Velocity
-		g.broadcastMessage(&m)
+		m.Player = username
+		message[i] = m
+		i++
 	}
+	g.broadcastMessage(&message)
 	time.Sleep(time.Millisecond * 20)
 }
 
@@ -88,9 +96,16 @@ func (g *GameRoom) movePlayer(m *messaging.CommRoomMessageMovePlayer) {
 }
 
 func (g *GameRoom) RemovePlayer(username string) {
+	log.Println("Removing player ", username)
 	g.mutex.Lock()
 	delete(g.Players, username)
 	delete(g.RoomOutputChannels, username)
 	g.mutex.Unlock()
 	//g.broadcastMessage(m)
+}
+
+func (g *GameRoom) AddPlayer(username string) {
+	player := PlayerGameData{Username: username}
+	g.Players[username] = &player
+	g.RoomOutputChannels[username] = make(chan messaging.RoomMessageValue)
 }

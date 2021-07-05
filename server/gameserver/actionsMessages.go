@@ -6,8 +6,9 @@ const (
 	ActionMessageCreateRoom actionMessageTypes = "CREATEROOM"
 	ActionMessageLeaveRoom  actionMessageTypes = "LEAVEROOM"
 	ActionMessageJoinRoom   actionMessageTypes = "JOINROOM"
-	ActionMessageMovement 	actionMessageTypes="POSITION"
+	ActionMessageMovement   actionMessageTypes = "POSITION"
 )
+
 type movemementMessage struct {
 	Action    actionMessageTypes `json:"action"`
 	PositionX float32            `json:"position_x"`
@@ -16,14 +17,13 @@ type movemementMessage struct {
 	VelocityY float32            `json:"velocity_y"`
 	Rotation  float32            `json:"rotation"`
 }
-func (m *movemementMessage) GetAction()actionMessageTypes{
-	return m.Action
-}
+
 type message struct {
 	Action  actionMessageTypes `json:"action"`
 	Message string             `json:"message"`
 }
-func (m *message) GetAction()actionMessageTypes{
+
+func (m message) GetAction() actionMessageTypes {
 	return m.Action
 }
 
@@ -31,6 +31,4 @@ type singleStringReturnMessage struct {
 	Message string `json:"message"`
 }
 
-type actionMessage interface{
-	GetAction() actionMessageTypes
-}
+type genericMessage map[string]interface{}

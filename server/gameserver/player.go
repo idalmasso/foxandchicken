@@ -44,9 +44,8 @@ func (p *Player) PlayerCycle() {
 		p.Conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 		if err := p.Conn.ReadJSON(&mex); err != nil {
 			log.Println("ERROR "+p.username, "cannot decode the message", err.Error())
-			p.Conn.Close()
+			p.Close()
 			p.GameInstance.RemovePlayer(p.username)
-			p.EndPlayer <- true
 			return
 		}
 		fmt.Println("Received message " + mex.Message + " from user " + p.username)
@@ -102,6 +101,7 @@ func (p *Player) tryCreateRoom(roomName string) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	p.RoomChannel = ret.RoomChannel
+	p.RoomChannelOutput = ret.RoomResponseChannel
 	p.IsInRoom = true
 	return nil
 }
@@ -117,10 +117,10 @@ func (p *Player) tryJoinRoom(roomName string) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	p.RoomChannel = ret.RoomChannel
+	p.RoomChannelOutput = ret.RoomResponseChannel
 	p.IsInRoom = true
 	return nil
 }
-
 
 //ReadUsername block the user until an ok username is inserted
 func (p *Player) ReadUsername() {
@@ -189,4 +189,17 @@ func (p *Player) PlayerBroadcastListener() {
 			}
 		}
 	}
+}
+
+func (p *Player) Close() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.IsInRoom {
+		p.EndGameChannel <- true
+		close(p.EndGameChannel)
+	}
+	close(p.GameInstance.InputChannel)
+	p.EndPlayer <- true
+	p.Conn.Close()
+
 }
