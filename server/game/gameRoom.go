@@ -60,8 +60,7 @@ func (g *GameRoom) Run() {
 
 func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 	//log.Printf("room %s broadcast %T", g.Name, message.GetMessageType())
-	g.Instance.mutex.Lock()
-	defer g.Instance.mutex.Unlock()
+
 	for p := range g.Players {
 		//log.Println("---Send message to", p)
 		g.RoomOutputChannels[p] <- message
@@ -101,7 +100,7 @@ func (g *GameRoom) RemovePlayer(username string) {
 	delete(g.Players, username)
 	delete(g.RoomOutputChannels, username)
 	g.mutex.Unlock()
-	//g.broadcastMessage(m)
+	g.broadcastMessage(&messaging.CommRoomMessageLeftPlayer{Player: username})
 }
 
 func (g *GameRoom) AddPlayer(username string) {

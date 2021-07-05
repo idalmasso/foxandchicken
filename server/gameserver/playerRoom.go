@@ -96,18 +96,22 @@ func (p *Player) PlayerRoomGameCycle() {
 	for {
 		select {
 		case <-p.EndGameChannel:
-			close(p.RoomChannel)
 			return
 		case v := <-p.RoomChannelOutput:
-			if v.GetMessageType() == messaging.RoomMessageTypePlayersMovement {
+			switch v.GetMessageType() {
+			case messaging.RoomMessageTypePlayersMovement:
 				p.mutex.Lock()
 				moves := v.(*messaging.CommRoomMessagePlayersMovement)
 				//log.Println("received message move>", move.Player)
 				p.Conn.WriteJSON(moves)
 				p.mutex.Unlock()
-
+			case messaging.RoomMessageTypeLeftPlayer:
+				p.mutex.Lock()
+				mex := v.(*messaging.CommRoomMessageLeftPlayer)
+				//log.Println("received message move>", move.Player)
+				p.Conn.WriteJSON(message{Action: "LEAVEROOM", Message: mex.Player})
+				p.mutex.Unlock()
 			}
-
 		}
 	}
 }
