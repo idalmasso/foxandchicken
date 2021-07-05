@@ -3,26 +3,37 @@ package gameserver
 type actionMessageTypes string
 
 const (
+	//ActionMessageCreateRoom is the action to create a room
 	ActionMessageCreateRoom actionMessageTypes = "CREATEROOM"
-	ActionMessageLeaveRoom  actionMessageTypes = "LEAVEROOM"
-	ActionMessageJoinRoom   actionMessageTypes = "JOINROOM"
-	ActionMessageMovement   actionMessageTypes = "POSITION"
+	//ActionMessageLeaveRoom is the action to leave a room
+	ActionMessageLeaveRoom actionMessageTypes = "LEAVEROOM"
+	//ActionMessageJoinRoom is the action to join a room
+	ActionMessageJoinRoom actionMessageTypes = "JOINROOM"
+	//ActionMessageMovement is the action to send a position
+	ActionMessageMovement actionMessageTypes = "POSITION"
 )
 
-type movemementMessage struct {
-	Action    actionMessageTypes `json:"action"`
-	PositionX float32            `json:"position_x"`
-	PositionY float32            `json:"position_y"`
-	VelocityX float32            `json:"velocity_x"`
-	VelocityY float32            `json:"velocity_y"`
-	Rotation  float32            `json:"rotation"`
+type movementStruct struct {
+	PositionX float32 `json:"position_x"`
+	PositionY float32 `json:"position_y"`
+	VelocityX float32 `json:"velocity_x"`
+	VelocityY float32 `json:"velocity_y"`
+	Rotation  float32 `json:"rotation"`
 }
 
+//movemementMessage is the message sent to and from the client with the position/velocity of the player
+type movemementMessage struct {
+	Action  actionMessageTypes `json:"action"`
+	Message movementStruct     `json:"message"`
+}
+
+//message is an action/message type of message from/to the client
 type message struct {
 	Action  actionMessageTypes `json:"action"`
 	Message string             `json:"message"`
 }
 
+//GetAction returns the action of the message
 func (m message) GetAction() actionMessageTypes {
 	return m.Action
 }
@@ -31,4 +42,13 @@ type singleStringReturnMessage struct {
 	Message string `json:"message"`
 }
 
-type genericMessage map[string]interface{}
+//genericMessage is a type for the other messages
+type genericMessage struct {
+	Action  actionMessageTypes `json:"action"`
+	Message interface{}        `json:"message"`
+}
+
+//GetAction returns the action of the message
+func (m genericMessage) GetAction() actionMessageTypes {
+	return m.Action
+}

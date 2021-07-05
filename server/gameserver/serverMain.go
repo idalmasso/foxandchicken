@@ -13,12 +13,12 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+//user is the login type from json
 type user struct {
 	Username string `json:"username"`
 }
-type userResponse struct {
-	Id string `json:"id"`
-}
+
+//GameServer is a game server with rooms and other things...
 type GameServer struct {
 	Instance *game.GameInstance
 }

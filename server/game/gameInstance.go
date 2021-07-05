@@ -9,6 +9,7 @@ import (
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
 
+//GameInstance struct containing the data for an instance and its rooms
 type GameInstance struct {
 	Rooms                        map[string]*GameRoom
 	Players                      map[string]string //contains the room where he is
@@ -19,6 +20,7 @@ type GameInstance struct {
 	InputChannel                 chan messaging.InstanceMessageValue
 }
 
+//AddPlayer adds a player to the instance
 func (instance *GameInstance) AddPlayer(username string) error {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
@@ -32,11 +34,14 @@ func (instance *GameInstance) AddPlayer(username string) error {
 	return nil
 }
 
+//setPlayerWaiting set a player as waiting (not in a room)
 func (instance *GameInstance) setPlayerWaiting(username string) {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
 	instance.PlayersWaiting[username] = struct{}{}
 }
+
+//RemovePlayer removes a player from the instance
 func (instance *GameInstance) RemovePlayer(username string) {
 	instance.mutex.Lock()
 	defer instance.mutex.Unlock()
@@ -53,6 +58,7 @@ func (instance *GameInstance) RemovePlayer(username string) {
 	delete(instance.PlayerDataChannelsBroadcasts, username)
 }
 
+//NewInstance return a GameInstance
 func NewInstance() *GameInstance {
 	var gameInstance GameInstance
 	gameInstance.Players = make(map[string]string)
@@ -64,6 +70,7 @@ func NewInstance() *GameInstance {
 	return &gameInstance
 }
 
+//GameInstanceRun is the main instance (creates and remove rooms and other)
 func (g *GameInstance) GameInstanceRun() {
 	log.Println("Game instance starting")
 	for {
@@ -158,6 +165,7 @@ func (g *GameInstance) GameInstanceRun() {
 	}
 }
 
+//removeRoom removes a room from an instance
 func (g *GameInstance) removeRoom(room string) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
@@ -167,12 +175,14 @@ func (g *GameInstance) removeRoom(room string) {
 	g.broadCastMessageAllPlayers(&m)
 }
 
+//broadCastMessageWaitingPlayers broadcast a message to players not in a room
 func (g *GameInstance) broadCastMessageWaitingPlayers(message messaging.InstanceMessageValue) {
 	for p := range g.PlayersWaiting {
 		g.PlayerDataChannelsBroadcasts[p] <- message
 	}
 }
 
+//broadCastMessageAllPlayers broadcast a message to all players
 func (g *GameInstance) broadCastMessageAllPlayers(message messaging.InstanceMessageValue) {
 	for p := range g.Players {
 		g.PlayerDataChannelsBroadcasts[p] <- message

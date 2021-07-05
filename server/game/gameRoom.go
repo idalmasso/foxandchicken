@@ -8,6 +8,7 @@ import (
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
 
+//GameRoom struct containing the game room data
 type GameRoom struct {
 	Name               string `json:"name"`
 	Players            map[string]*PlayerGameData
@@ -17,8 +18,10 @@ type GameRoom struct {
 	mutex              sync.Mutex
 	RoomInputChannel   chan messaging.RoomMessageValue
 	RoomOutputChannels map[string]chan messaging.RoomMessageValue
+	timestamp          int64
 }
 
+//createRoom creates the actual room in a gameinstance
 func createRoom(name string, instance *GameInstance) *GameRoom {
 	log.Println("Creating room", name)
 	g := GameRoom{Instance: instance}
@@ -31,7 +34,11 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 	return &g
 }
 
+//Run is the GameRoom main call
 func (g *GameRoom) Run() {
+	g.mutex.Lock()
+	g.timestamp = time.Now().UnixNano()
+	g.mutex.Unlock()
 	for {
 		if len(g.Players) == 0 {
 			log.Println("Room", g.Name, "empty, removing")
@@ -58,6 +65,7 @@ func (g *GameRoom) Run() {
 	}
 }
 
+//broadcastMessage send a message to all players in room
 func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 	//log.Printf("room %s broadcast %T", g.Name, message.GetMessageType())
 
@@ -69,12 +77,18 @@ func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 
 //Right by now it will be ALL on frontend... Next->checks
 func (g *GameRoom) gameCycle() {
+	newTimestamp := time.Now().UnixNano()
+	//timeDelta := newTimestamp - g.timestamp
 	g.mutex.Lock()
-	defer g.mutex.Unlock()
+	defer func() {
+		g.mutex.Unlock()
+		time.Sleep(time.Millisecond * 50)
+	}()
 	message := make(messaging.CommRoomMessagePlayersMovement, len(g.Players))
 	i := 0
 
 	for username, p := range g.Players {
+		//CALL MOVEPLAYER FOR ALL PLAYERS HERE
 		var m messaging.CommRoomMessageMovePlayer
 		m.Position = p.Position
 		m.Rotation = p.Rotation
@@ -84,7 +98,8 @@ func (g *GameRoom) gameCycle() {
 		i++
 	}
 	g.broadcastMessage(&message)
-	time.Sleep(time.Millisecond * 20)
+	g.timestamp = newTimestamp
+
 }
 
 //Right by now it will be ALL on frontend... Next->checks
@@ -94,6 +109,7 @@ func (g *GameRoom) movePlayer(m *messaging.CommRoomMessageMovePlayer) {
 	g.Players[m.Player].Velocity = m.Velocity
 }
 
+//RemovePlayer removes a player from the room
 func (g *GameRoom) RemovePlayer(username string) {
 	log.Println("Removing player ", username)
 	g.mutex.Lock()
@@ -103,6 +119,7 @@ func (g *GameRoom) RemovePlayer(username string) {
 	g.broadcastMessage(&messaging.CommRoomMessageLeftPlayer{Player: username})
 }
 
+//AddPlayer add a player in the room
 func (g *GameRoom) AddPlayer(username string) {
 	player := PlayerGameData{Username: username}
 	g.Players[username] = &player

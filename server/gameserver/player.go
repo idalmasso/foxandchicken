@@ -28,6 +28,7 @@ type Player struct {
 	EndPlayer         chan bool
 }
 
+//UpdateWebSocket updates the websocket connection in the player
 func (p *Player) UpdateWebSocket(conn *websocket.Conn) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -36,6 +37,7 @@ func (p *Player) UpdateWebSocket(conn *websocket.Conn) {
 
 }
 
+//PlayerCycle is the cycle of a player when not in the room
 func (p *Player) PlayerCycle() {
 	p.ReadUsername()
 	go p.PlayerBroadcastListener()
@@ -89,6 +91,7 @@ func (p *Player) PlayerCycle() {
 	}
 }
 
+//tryCreateRoom tries to create a named room in the server. Automatically joins it
 func (p *Player) tryCreateRoom(roomName string) error {
 	var m messaging.CommMessageCreateRoom
 	m.Player = p.username
@@ -105,6 +108,8 @@ func (p *Player) tryCreateRoom(roomName string) error {
 	p.IsInRoom = true
 	return nil
 }
+
+//tryJoinRoom tries to join a named room in the server
 func (p *Player) tryJoinRoom(roomName string) error {
 	var m messaging.CommRoomMessageJoinPlayer
 	m.Player = p.username
@@ -153,6 +158,8 @@ func (p *Player) ReadUsername() {
 
 	}
 }
+
+//sendAndReturnError send a message to the instance and test its return value
 func (p *Player) sendAndReturnError(m messaging.InstanceMessageValue, acceptedType messaging.MessageType) (messaging.InstanceMessageValue, error) {
 	p.GameInstance.InputChannel <- m
 	v := <-p.GameInstance.PlayerDataChannels[p.username]
@@ -166,14 +173,16 @@ func (p *Player) sendAndReturnError(m messaging.InstanceMessageValue, acceptedTy
 	return v, nil
 }
 
+//NewPlayer returns a new Player using a gameInstance instance
 func NewPlayer(instance *game.GameInstance) *Player {
 	var p Player
 	p.GameInstance = instance
 	p.IsInRoom = false
 	p.EndGameChannel = make(chan bool)
-
 	return &p
 }
+
+//PlayerBroadcastListener is the listener for the broadcast messages from the gameInstance
 func (p *Player) PlayerBroadcastListener() {
 	for {
 		select {
@@ -191,6 +200,7 @@ func (p *Player) PlayerBroadcastListener() {
 	}
 }
 
+//Close close the player handles
 func (p *Player) Close() {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()

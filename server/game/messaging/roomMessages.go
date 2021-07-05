@@ -2,11 +2,12 @@ package messaging
 
 import "github.com/idalmasso/foxandchicken/server/game/common"
 
+//CommRoomMessageMovePlayer movement of a player message
 type CommRoomMessageMovePlayer struct {
-	Player             string `json:"player"`
+	Player   string         `json:"player"`
 	Position common.Vector2 `json:"position"`
-	Velocity common.Vector2  `json:"velocity"`
-	Rotation           float32 `json:"rotation"`
+	Velocity common.Vector2 `json:"velocity"`
+	Rotation float32        `json:"rotation"`
 }
 
 func (m *CommRoomMessageMovePlayer) ErrorMessage() string {
@@ -15,6 +16,7 @@ func (m *CommRoomMessageMovePlayer) ErrorMessage() string {
 func (m *CommRoomMessageMovePlayer) GetMessageType() MessageType {
 	return RoomMessageTypeMovePlayer
 }
+
 type CommRoomMessagePlayersMovement []CommRoomMessageMovePlayer
 
 func (m *CommRoomMessagePlayersMovement) ErrorMessage() string {
@@ -23,6 +25,7 @@ func (m *CommRoomMessagePlayersMovement) ErrorMessage() string {
 func (m *CommRoomMessagePlayersMovement) GetMessageType() MessageType {
 	return RoomMessageTypePlayersMovement
 }
+
 type CommRoomMessageJoinPlayer struct {
 	Player string
 	Name   string
