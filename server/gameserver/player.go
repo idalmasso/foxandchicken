@@ -88,7 +88,6 @@ func (p *Player) PlayerCycle() {
 		}
 
 	}
-
 }
 
 func (p *Player) tryCreateRoom(roomName string) error {
@@ -121,15 +120,7 @@ func (p *Player) tryJoinRoom(roomName string) error {
 	p.IsInRoom = true
 	return nil
 }
-func (p *Player) tryLeaveRoom() error {
-	var m messaging.CommRoomMessageLeftPlayer
-	m.Player = p.username
-	_, err := p.sendAndReturnError(&m, messaging.MessageResponse)
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	p.IsInRoom = false
-	return err
-}
+
 
 //ReadUsername block the user until an ok username is inserted
 func (p *Player) ReadUsername() {
