@@ -4,10 +4,12 @@ import "github.com/idalmasso/foxandchicken/server/game/common"
 
 //CommRoomMessageMovePlayer movement of a player message
 type CommRoomMessageMovePlayer struct {
-	Player   string         `json:"player"`
-	Position common.Vector2 `json:"position"`
-	Velocity common.Vector2 `json:"velocity"`
-	Rotation float32        `json:"rotation"`
+	Player       string         `json:"player"`
+	Position     common.Vector2 `json:"position"`
+	Velocity     common.Vector2 `json:"velocity"`
+	Acceleration common.Vector2 `json:"acceleration"`
+	Rotation     float64        `json:"rotation"`
+	Timestamp    int64          `json:"ts"`
 }
 
 func (m *CommRoomMessageMovePlayer) ErrorMessage() string {

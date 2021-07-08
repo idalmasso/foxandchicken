@@ -14,11 +14,13 @@ const (
 )
 
 type movementStruct struct {
-	PositionX float32 `json:"position_x"`
-	PositionY float32 `json:"position_y"`
-	VelocityX float32 `json:"velocity_x"`
-	VelocityY float32 `json:"velocity_y"`
-	Rotation  float32 `json:"rotation"`
+	PositionX     float64 `json:"position_x"`
+	PositionY     float64 `json:"position_y"`
+	VelocityX     float64 `json:"velocity_x"`
+	VelocityY     float64 `json:"velocity_y"`
+	AccelerationX float64 `json:"a_x"`
+	AccelerationY float64 `json:"a_y"`
+	Rotation      float64 `json:"rotation"`
 }
 
 //movemementMessage is the message sent to and from the client with the position/velocity of the player

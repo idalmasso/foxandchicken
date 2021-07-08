@@ -1,6 +1,8 @@
 package gameserver
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -29,10 +31,16 @@ func (p *Player) PlayerRoomInputCycle() error {
 	for {
 		p.Conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 		if err := p.Conn.ReadJSON(&mex); err != nil {
-			log.Println("ERROR "+p.username, "cannot decode the message", err.Error())
-			p.Close()
-			p.GameInstance.RemovePlayer(p.username)
-			return err
+			var jErr *json.SyntaxError
+			if errors.As(err, &jErr) {
+				log.Println("ERROR "+p.username, "cannot decode the message", err.Error())
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
+			} else {
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
+				p.Conn.Close()
+				p.GameInstance.RemovePlayer(p.username)
+				return err
+			}
 		}
 		if !p.IsInRoom {
 			return nil
@@ -54,9 +62,12 @@ func (p *Player) PlayerRoomInputCycle() error {
 				return nil
 			}
 		case ActionMessageMovement:
-			m, ok := mex.Message.(movementStruct)
+			jsonString, _ := json.Marshal(mex.Message)
+			m := movementStruct{}
+			err := json.Unmarshal(jsonString, &m)
+			//m, ok := mex.Message.(movementStruct)
 
-			if !ok {
+			if err != nil {
 				p.mutex.Lock()
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "message not recognized"})
 				p.mutex.Unlock()
@@ -64,7 +75,8 @@ func (p *Player) PlayerRoomInputCycle() error {
 				p.mutex.Lock()
 				position := common.Vector2{X: m.PositionX, Y: m.PositionY}
 				velocity := common.Vector2{X: m.VelocityX, Y: m.VelocityY}
-				sMex := messaging.CommRoomMessageMovePlayer{Player: p.username, Position: position, Velocity: velocity, Rotation: m.Rotation}
+				acceleration := common.Vector2{X: m.AccelerationX, Y: m.AccelerationY}
+				sMex := messaging.CommRoomMessageMovePlayer{Player: p.username, Position: position, Velocity: velocity, Rotation: m.Rotation, Acceleration: acceleration}
 				p.RoomChannel <- &sMex
 				p.mutex.Unlock()
 			}

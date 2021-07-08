@@ -54,7 +54,9 @@ func (instance *GameInstance) RemovePlayer(username string) {
 
 	delete(instance.Players, username)
 	delete(instance.PlayersWaiting, username)
+	close(instance.PlayerDataChannels[username])
 	delete(instance.PlayerDataChannels, username)
+	close(instance.PlayerDataChannelsBroadcasts[username])
 	delete(instance.PlayerDataChannelsBroadcasts, username)
 }
 

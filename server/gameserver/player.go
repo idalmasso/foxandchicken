@@ -1,6 +1,8 @@
 package gameserver
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -39,16 +41,24 @@ func (p *Player) UpdateWebSocket(conn *websocket.Conn) {
 
 //PlayerCycle is the cycle of a player when not in the room
 func (p *Player) PlayerCycle() {
-	p.ReadUsername()
+	if err := p.ReadUsername(); err != nil {
+		return
+	}
 	go p.PlayerBroadcastListener()
 	var mex message
 	for {
 		p.Conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 		if err := p.Conn.ReadJSON(&mex); err != nil {
-			log.Println("ERROR "+p.username, "cannot decode the message", err.Error())
-			p.Close()
-			p.GameInstance.RemovePlayer(p.username)
-			return
+			var jErr *json.SyntaxError
+			if errors.As(err, &jErr) {
+				log.Println("ERROR "+p.username, "cannot decode the message", err.Error())
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
+			} else {
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
+				p.Conn.Close()
+				p.GameInstance.RemovePlayer(p.username)
+				return
+			}
 		}
 		fmt.Println("Received message " + mex.Message + " from user " + p.username)
 		switch mex.Action {
@@ -128,14 +138,22 @@ func (p *Player) tryJoinRoom(roomName string) error {
 }
 
 //ReadUsername block the user until an ok username is inserted
-func (p *Player) ReadUsername() {
+func (p *Player) ReadUsername() error {
 	var u usernameMessage
 	ok := false
 	for !ok {
 		p.Conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 		err := p.Conn.ReadJSON(&u)
 		if err != nil {
-			p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
+			var jErr *json.SyntaxError
+			if errors.As(err, &jErr) {
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
+			} else {
+				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
+				p.Conn.Close()
+				return fmt.Errorf("TIMEOUT")
+			}
+
 		} else if u.Username != "" {
 			err = p.GameInstance.AddPlayer(u.Username)
 			if err == nil {
@@ -157,6 +175,7 @@ func (p *Player) ReadUsername() {
 		}
 
 	}
+	return nil
 }
 
 //sendAndReturnError send a message to the instance and test its return value
@@ -208,7 +227,7 @@ func (p *Player) Close() {
 		p.EndGameChannel <- true
 		close(p.EndGameChannel)
 	}
-	close(p.GameInstance.InputChannel)
+
 	p.EndPlayer <- true
 	p.Conn.Close()
 

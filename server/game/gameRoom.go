@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/idalmasso/foxandchicken/server/game/common"
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
 
@@ -12,12 +13,15 @@ import (
 type GameRoom struct {
 	Name               string `json:"name"`
 	Players            map[string]*PlayerGameData
-	sizeX, sizeY       float32
+	sizeX, sizeY       float64
 	status             int
 	Instance           *GameInstance
 	mutex              sync.Mutex
 	RoomInputChannel   chan messaging.RoomMessageValue
 	RoomOutputChannels map[string]chan messaging.RoomMessageValue
+	MaxAcceleration    float64
+	MaxVelocity        float64
+	Drag               float64
 	timestamp          int64
 }
 
@@ -30,6 +34,9 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 	g.RoomInputChannel = make(chan messaging.RoomMessageValue)
 	g.Name = name
 	g.sizeX, g.sizeY = 100, 100
+	g.MaxAcceleration = 1
+	g.MaxVelocity = 2
+	g.Drag = 0.9
 	g.RoomOutputChannels = make(map[string]chan messaging.RoomMessageValue, 0)
 	return &g
 }
@@ -54,7 +61,7 @@ func (g *GameRoom) Run() {
 					m := val.(*messaging.CommRoomMessageMovePlayer)
 					//todo: Remove this line
 					log.Println("Player", m.Player, "move in room", g.Name)
-					g.movePlayer(m)
+					g.playerInput(m)
 
 				}
 			}
@@ -78,7 +85,7 @@ func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 //Right by now it will be ALL on frontend... Next->checks
 func (g *GameRoom) gameCycle() {
 	newTimestamp := time.Now().UnixNano()
-	//timeDelta := newTimestamp - g.timestamp
+	timeDelta := time.Duration(newTimestamp - g.timestamp)
 	g.mutex.Lock()
 	defer func() {
 		g.mutex.Unlock()
@@ -89,11 +96,16 @@ func (g *GameRoom) gameCycle() {
 
 	for username, p := range g.Players {
 		//CALL MOVEPLAYER FOR ALL PLAYERS HERE
+		p.mutex.Lock()
+		g.movePlayer(p, timeDelta)
+		p.timestamp = newTimestamp
+		p.mutex.Unlock()
 		var m messaging.CommRoomMessageMovePlayer
 		m.Position = p.Position
 		m.Rotation = p.Rotation
 		m.Velocity = p.Velocity
 		m.Player = username
+		m.Timestamp = newTimestamp
 		message[i] = m
 		i++
 	}
@@ -102,11 +114,54 @@ func (g *GameRoom) gameCycle() {
 
 }
 
+func (g *GameRoom) movePlayer(p *PlayerGameData, deltaT time.Duration) {
+	ts := deltaT.Seconds()
+	p.Position = common.VectorSum(p.Position, p.Velocity.ScalarProduct(ts))
+	p.Position = p.Position.ClampVector(0, g.sizeX, 0, g.sizeY)
+	if p.Position.X < 0 {
+		p.Position.X = 0
+	}
+	if p.Position.X > g.sizeX {
+		p.Position.X = g.sizeX
+	}
+	if p.Acceleration.X == 0 && p.Acceleration.Y == 0 {
+		magnitude := p.Velocity.SqrtMagnitude()
+		if magnitude < 0.01 {
+			p.Velocity.X = 0
+			p.Velocity.Y = 0
+			return
+		}
+		p.Velocity = common.VectorSum(p.Velocity, p.Velocity.ScalarProduct(-g.Drag*ts))
+	} else {
+		p.Velocity = common.VectorSum(p.Velocity, p.Acceleration.ScalarProduct(ts))
+		magnitude := p.Velocity.SqrtMagnitude()
+
+		if magnitude > float64(g.MaxVelocity) {
+			p.Velocity = p.Velocity.ScalarProduct(g.MaxVelocity / magnitude)
+		}
+	}
+
+}
+
 //Right by now it will be ALL on frontend... Next->checks
-func (g *GameRoom) movePlayer(m *messaging.CommRoomMessageMovePlayer) {
-	g.Players[m.Player].Position = m.Position
+func (g *GameRoom) playerInput(m *messaging.CommRoomMessageMovePlayer) {
+	g.Players[m.Player].mutex.Lock()
+	defer g.Players[m.Player].mutex.Unlock()
+	newTimestamp := time.Now().UnixNano()
+	if m.Timestamp > newTimestamp || m.Timestamp == 0 {
+		m.Timestamp = newTimestamp
+	}
+
+	magnitude := m.Acceleration.SqrtMagnitude()
+
+	if magnitude > float64(g.MaxAcceleration) {
+		m.Acceleration = m.Acceleration.ScalarProduct(g.MaxAcceleration / magnitude)
+	}
 	g.Players[m.Player].Rotation = m.Rotation
-	g.Players[m.Player].Velocity = m.Velocity
+	g.Players[m.Player].Acceleration = m.Acceleration
+	g.movePlayer(g.Players[m.Player], time.Duration(newTimestamp-m.Timestamp))
+	g.timestamp = newTimestamp
+
 }
 
 //RemovePlayer removes a player from the room
@@ -121,7 +176,7 @@ func (g *GameRoom) RemovePlayer(username string) {
 
 //AddPlayer add a player in the room
 func (g *GameRoom) AddPlayer(username string) {
-	player := PlayerGameData{Username: username}
+	player := PlayerGameData{Username: username, timestamp: time.Now().UnixNano()}
 	g.Players[username] = &player
 	g.RoomOutputChannels[username] = make(chan messaging.RoomMessageValue)
 }
