@@ -9,6 +9,11 @@ import (
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
 
+//GameRoomNumPlayer is the struct that returns the data about number rooms and players in that
+type GameRoomNumPlayer struct{
+	Name string `json:"name"`
+	Players int `json:"players"`
+}
 //GameRoom struct containing the game room data
 type GameRoom struct {
 	Name               string `json:"name"`
@@ -37,7 +42,7 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 	g.MaxAcceleration = 1
 	g.MaxVelocity = 2
 	g.Drag = 0.9
-	g.RoomOutputChannels = make(map[string]chan messaging.RoomMessageValue, 0)
+	g.RoomOutputChannels = make(map[string]chan messaging.RoomMessageValue )
 	return &g
 }
 

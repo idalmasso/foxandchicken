@@ -19,6 +19,6 @@ func main() {
 	var webServer gameserver.GameServer
 	webServer.Instance = gameInstance
 	go gameInstance.GameInstanceRun()
-	r.Get("/login", webServer.ManageRequest)
+	r.Get("/api/ws", webServer.ManageRequest)
 	http.ListenAndServe(":3000", r)
 }

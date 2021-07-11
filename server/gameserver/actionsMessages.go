@@ -11,6 +11,8 @@ const (
 	ActionMessageJoinRoom actionMessageTypes = "JOINROOM"
 	//ActionMessageMovement is the action to send a position
 	ActionMessageMovement actionMessageTypes = "POSITION"
+	//ActionListRooms is the action to request a list for all rooms
+	ActionListRooms actionMessageTypes = "LISTROOMS"
 )
 
 type movementStruct struct {

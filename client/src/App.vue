@@ -1,22 +1,24 @@
 <template>
-  <the-application-bar/>
-  <router-view/>
+  <the-application-bar />
+  <router-view class="content" />
 </template>
 <script>
-import TheApplicationBar from './components/TheApplicationBar.vue'
+import TheApplicationBar from './components/TheApplicationBar.vue';
 export default {
   components: { TheApplicationBar },
-  data () {
+  data() {
     return {
       rooms: {
         name: 'Rooms'
       }
-    }
+    };
   }
-}
+};
 </script>
 <style>
-#app {
+body {
+  width: 100%;
+  height: 100vh;
   margin: 0;
   padding: 0;
   border: 0;
@@ -24,17 +26,13 @@ export default {
   font: inherit;
   vertical-align: baseline;
 }
-
-#nav {
-  padding: 30px;
+#app {
+  position: relative;
+  padding: 2px;
 }
-
-#nav a {
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-#nav a.router-link-exact-active {
-  color: #42b983;
+.content {
+  width: 80%;
+  margin-right: 15%;
+  margin-left: 15%;
 }
 </style>

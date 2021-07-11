@@ -55,7 +55,7 @@ func (p *Player) PlayerCycle() {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
 			} else {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
-				p.Conn.Close()
+				p.Close()
 				p.GameInstance.RemovePlayer(p.username)
 				return
 			}
@@ -91,6 +91,11 @@ func (p *Player) PlayerCycle() {
 					return
 				}
 			}
+		case ActionListRooms:
+			rooms:=p.GameInstance.GetRooms()
+			p.mutex.Lock()
+			p.Conn.WriteJSON(rooms)
+			p.mutex.Unlock()
 		default:
 			p.mutex.Lock()
 			p.Conn.WriteJSON(singleStringReturnMessage{Message: "action not recognized"})
