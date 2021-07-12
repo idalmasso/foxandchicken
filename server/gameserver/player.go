@@ -214,8 +214,10 @@ func (p *Player) PlayerBroadcastListener() {
 		select {
 		case <-p.EndPlayer:
 			log.Println("Player Broadcast exit" + p.username)
+			close(p.EndPlayer)
 			return
 		case m := <-p.GameInstance.PlayerDataChannelsBroadcasts[p.username]:
+			p.mutex.Lock()
 			if !p.IsClosing {
 				switch m.GetMessageType() {
 				default:
@@ -224,6 +226,7 @@ func (p *Player) PlayerBroadcastListener() {
 					p.mutex.Unlock()
 				}
 			}
+			p.mutex.Unlock()
 		}
 	}
 }
@@ -232,11 +235,12 @@ func (p *Player) PlayerBroadcastListener() {
 func (p *Player) Close() {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
+	p.IsClosing=true
 	if p.IsInRoom {
 		p.EndGameChannel <- true
-		close(p.EndGameChannel)
+		
 	}
-
+	
 	p.EndPlayer <- true
 	p.Conn.Close()
 

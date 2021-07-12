@@ -9,8 +9,8 @@ const (
 	ActionMessageLeaveRoom actionMessageTypes = "LEAVEROOM"
 	//ActionMessageJoinRoom is the action to join a room
 	ActionMessageJoinRoom actionMessageTypes = "JOINROOM"
-	//ActionMessageMovement is the action to send a position
-	ActionMessageMovement actionMessageTypes = "POSITION"
+	//ActionMessageMovement is the action to send a movement
+	ActionMessageMovement actionMessageTypes = "MOVEMENT"
 	//ActionListRooms is the action to request a list for all rooms
 	ActionListRooms actionMessageTypes = "LISTROOMS"
 )

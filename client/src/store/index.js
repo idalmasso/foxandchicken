@@ -1,4 +1,5 @@
 import { createStore } from 'vuex';
+import router from '../router';
 import inputEvents from './inputEvents';
 
 export default createStore({
@@ -57,6 +58,7 @@ export default createStore({
           console.log(event);
           console.log('Connection closed');
           context.commit('LOGOUT');
+          router.push({ name: 'Home' });
         };
         context.commit('ADDCONNECTION', conn);
       } else {
@@ -69,28 +71,63 @@ export default createStore({
       if (context.getters.connection != null) {
         context.getters.connection.onmessage = event =>
           inputEvents.onMessageGetRoomsEvent(event, context);
-        context.getters.connection.send(JSON.stringify({ action: 'LISTROOMS' }));
+        context.getters.connection.send(
+          JSON.stringify({ action: 'LISTROOMS' })
+        );
       }
     },
     addRoom(context, roomName) {
-      if (roomName !== '' && context.state.connection != null && context.state.connection.username !== '') {
+      if (
+        roomName !== '' &&
+        context.state.connection != null &&
+        context.state.connection.username !== ''
+      ) {
         context.getters.connection.onmessage = event =>
           inputEvents.onMessageCreateJoinRoomEvent(event, context, roomName);
-        context.getters.connection.send(JSON.stringify({ action: 'CREATEROOM', message: roomName }));
+        context.getters.connection.send(
+          JSON.stringify({ action: 'CREATEROOM', message: roomName })
+        );
       }
     },
     joinRoom(context, roomName) {
-      if (roomName !== '' && context.state.connection != null && context.state.connection.username !== '') {
+      if (
+        roomName !== '' &&
+        context.state.connection != null &&
+        context.state.connection.username !== ''
+      ) {
         context.getters.connection.onmessage = event =>
           inputEvents.onMessageCreateJoinRoomEvent(event, context, roomName);
-        context.getters.connection.send(JSON.stringify({ action: 'JOINROOM', message: roomName }));
+        context.getters.connection.send(
+          JSON.stringify({ action: 'JOINROOM', message: roomName })
+        );
       }
     },
     joinedRoom(context, roomName) {
-      if (roomName !== '' && context.state.connection != null && context.state.connection.username !== '') {
+      if (
+        roomName !== '' &&
+        context.state.connection != null &&
+        context.state.username !== ''
+      ) {
         context.commit('JOINEDROOM', roomName);
         context.getters.connection.onmessage = event =>
           inputEvents.onMessagePositionEvent(event, context);
+      }
+    },
+    setAcceleration(context, { accelX, accelY }) {
+      if (
+        context.state.connection != null &&
+        context.state.username !== '' &&
+        context.state.actualRoom !== ''
+      ) {
+        context.state.connection.send(
+          JSON.stringify({
+            action: 'MOVEMENT',
+            message: {
+              a_x: accelX,
+              a_y: accelY
+            }
+          })
+        );
       }
     }
   },

@@ -37,7 +37,7 @@ func (p *Player) PlayerRoomInputCycle() error {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
 			} else {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
-				p.Conn.Close()
+				p.Close()
 				p.GameInstance.RemovePlayer(p.username)
 				return err
 			}
@@ -94,24 +94,23 @@ func (p *Player) PlayerRoomGameCycle() {
 	for {
 		select {
 		case <-p.EndGameChannel:
+			close(p.EndGameChannel)
 			return
 		case v := <-p.RoomChannelOutput:
+				p.mutex.Lock()
 			if !p.IsClosing {
 				switch v.GetMessageType() {
 				case messaging.RoomMessageTypePlayersMovement:
-					p.mutex.Lock()
 					moves := v.(*messaging.CommRoomMessagePlayersMovement)
 					//log.Println("received message move>", move.Player)
 					p.Conn.WriteJSON(moves)
-					p.mutex.Unlock()
 				case messaging.RoomMessageTypeLeftPlayer:
-					p.mutex.Lock()
 					mex := v.(*messaging.CommRoomMessageLeftPlayer)
 					//log.Println("received message move>", move.Player)
 					p.Conn.WriteJSON(message{Action: "LEAVEROOM", Message: mex.Player})
-					p.mutex.Unlock()
 				}
 			}
+			p.mutex.Unlock()
 		}
 	}
 }
