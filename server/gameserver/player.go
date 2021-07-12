@@ -28,6 +28,7 @@ type Player struct {
 	Conn              *websocket.Conn
 	EndGameChannel    chan bool
 	EndPlayer         chan bool
+	IsClosing         bool
 }
 
 //UpdateWebSocket updates the websocket connection in the player
@@ -92,7 +93,7 @@ func (p *Player) PlayerCycle() {
 				}
 			}
 		case ActionListRooms:
-			rooms:=p.GameInstance.GetRooms()
+			rooms := p.GameInstance.GetRooms()
 			p.mutex.Lock()
 			p.Conn.WriteJSON(rooms)
 			p.mutex.Unlock()
@@ -203,6 +204,7 @@ func NewPlayer(instance *game.GameInstance) *Player {
 	p.GameInstance = instance
 	p.IsInRoom = false
 	p.EndGameChannel = make(chan bool)
+	p.IsClosing = false
 	return &p
 }
 
@@ -214,11 +216,13 @@ func (p *Player) PlayerBroadcastListener() {
 			log.Println("Player Broadcast exit" + p.username)
 			return
 		case m := <-p.GameInstance.PlayerDataChannelsBroadcasts[p.username]:
-			switch m.GetMessageType() {
-			default:
-				p.mutex.Lock()
-				p.Conn.WriteJSON(singleStringReturnMessage{Message: "got message broadcast" + m.ErrorMessage()})
-				p.mutex.Unlock()
+			if !p.IsClosing {
+				switch m.GetMessageType() {
+				default:
+					p.mutex.Lock()
+					p.Conn.WriteJSON(singleStringReturnMessage{Message: "got message broadcast" + m.ErrorMessage()})
+					p.mutex.Unlock()
+				}
 			}
 		}
 	}
