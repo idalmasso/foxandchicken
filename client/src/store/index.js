@@ -5,7 +5,10 @@ export default createStore({
   state: {
     username: null,
     connection: null,
-    error: ''
+    actualRoom: '',
+    error: '',
+    rooms: [],
+    positions: null
   },
   mutations: {
     ADDCONNECTION(state, conn) {
@@ -21,6 +24,18 @@ export default createStore({
     },
     LOGINERROR(state, err) {
       state.error = err;
+    },
+    SETROOMS(state, rooms) {
+      state.rooms = rooms;
+    },
+    JOINEDROOM(state, room) {
+      state.actualRoom = room;
+    },
+    LEAVEROOM(state) {
+      state.actualRoom = '';
+    },
+    SETPOSITIONS(state, positions) {
+      state.positions = positions;
     }
   },
   actions: {
@@ -45,15 +60,52 @@ export default createStore({
         };
         context.commit('ADDCONNECTION', conn);
       } else {
-        conn.onmessage = event =>
+        context.getters.connection.onmessage = event =>
           inputEvents.onMessageLoginReturn(event, context, username);
         context.getters.connection.send(JSON.stringify({ username: username }));
+      }
+    },
+    async getRooms(context) {
+      if (context.getters.connection != null) {
+        context.getters.connection.onmessage = event =>
+          inputEvents.onMessageGetRoomsEvent(event, context);
+        context.getters.connection.send(JSON.stringify({ action: 'LISTROOMS' }));
+      }
+    },
+    addRoom(context, roomName) {
+      if (roomName !== '' && context.state.connection != null && context.state.connection.username !== '') {
+        context.getters.connection.onmessage = event =>
+          inputEvents.onMessageCreateJoinRoomEvent(event, context, roomName);
+        context.getters.connection.send(JSON.stringify({ action: 'CREATEROOM', message: roomName }));
+      }
+    },
+    joinRoom(context, roomName) {
+      if (roomName !== '' && context.state.connection != null && context.state.connection.username !== '') {
+        context.getters.connection.onmessage = event =>
+          inputEvents.onMessageCreateJoinRoomEvent(event, context, roomName);
+        context.getters.connection.send(JSON.stringify({ action: 'JOINROOM', message: roomName }));
+      }
+    },
+    joinedRoom(context, roomName) {
+      if (roomName !== '' && context.state.connection != null && context.state.connection.username !== '') {
+        context.commit('JOINEDROOM', roomName);
+        context.getters.connection.onmessage = event =>
+          inputEvents.onMessagePositionEvent(event, context);
       }
     }
   },
   getters: {
     connection(state) {
       return state.connection;
+    },
+    getRooms(state) {
+      return state.rooms;
+    },
+    authenticated(state) {
+      return state.username !== null && state.username !== '';
+    },
+    positions(state) {
+      return state.positions;
     }
   },
   modules: {}
