@@ -9,7 +9,13 @@ export default createStore({
     actualRoom: '',
     error: '',
     rooms: [],
-    positions: null
+    positions: null,
+    upPressed: false,
+    downPressed: false,
+    rightPressed: false,
+    leftPressed: false,
+    accelX: 0,
+    accelY: 0
   },
   mutations: {
     ADDCONNECTION(state, conn) {
@@ -37,6 +43,22 @@ export default createStore({
     },
     SETPOSITIONS(state, positions) {
       state.positions = positions;
+    },
+    SETACCELERATION(state, acceleration) {
+      state.accelX = acceleration.x;
+      state.accelY = acceleration.y;
+    },
+    SETUPBUTTONPRESSED(state, pressed) {
+      state.upPressed = pressed;
+    },
+    SETDOWNBUTTONPRESSED(state, pressed) {
+      state.downPressed = pressed;
+    },
+    SETLEFTBUTTONPRESSED(state, pressed) {
+      state.leftPressed = pressed;
+    },
+    SETRIGHTBUTTONPRESSED(state, pressed) {
+      state.rightPressed = pressed;
     }
   },
   actions: {
@@ -113,21 +135,68 @@ export default createStore({
           inputEvents.onMessagePositionEvent(event, context);
       }
     },
-    setAcceleration(context, { accelX, accelY }) {
+    async changeButtonState(context, { button, isPressed }) {
+      const calcAccel = () => {
+        const acceleration = { x: 0, y: 0 };
+        if (context.getters.buttonsPressed.up) {
+          acceleration.y += 1;
+        }
+        if (context.getters.buttonsPressed.down) {
+          acceleration.y -= 1;
+        }
+        if (context.getters.buttonsPressed.left) {
+          acceleration.x -= 1;
+        }
+        if (context.getters.buttonsPressed.right) {
+          acceleration.x += 1;
+        }
+        const modul = Math.sqrt(Math.pow(acceleration.x, 2) + Math.pow(acceleration.y, 2));
+        if (modul > 1) {
+          acceleration.x /= modul;
+          acceleration.y /= modul;
+        }
+        context.commit('SETACCELERATION', acceleration);
+        context.state.connection.send(
+          JSON.stringify({
+            action: 'MOVEMENT',
+            message: {
+              a_x: acceleration.x,
+              a_y: acceleration.y
+            }
+          })
+        );
+      };
       if (
         context.state.connection != null &&
         context.state.username !== '' &&
         context.state.actualRoom !== ''
       ) {
-        context.state.connection.send(
-          JSON.stringify({
-            action: 'MOVEMENT',
-            message: {
-              a_x: accelX,
-              a_y: accelY
+        switch (button) {
+          case 'up':
+            if (context.getters.buttonsPressed.up !== isPressed) {
+              context.commit('SETUPBUTTONPRESSED', isPressed);
+              calcAccel();
             }
-          })
-        );
+            break;
+          case 'down':
+            if (context.getters.buttonsPressed.down !== isPressed) {
+              context.commit('SETDOWNBUTTONPRESSED', isPressed);
+              calcAccel();
+            }
+            break;
+          case 'left':
+            if (context.getters.buttonsPressed.left !== isPressed) {
+              context.commit('SETLEFTBUTTONPRESSED', isPressed);
+              calcAccel();
+            }
+            break;
+          case 'right':
+            if (context.getters.buttonsPressed.right !== isPressed) {
+              context.commit('SETRIGHTBUTTONPRESSED', isPressed);
+              calcAccel();
+            }
+            break;
+        }
       }
     }
   },
@@ -143,6 +212,12 @@ export default createStore({
     },
     positions(state) {
       return state.positions;
+    },
+    accelaration(state) {
+      return { x: state.accelX, y: state.accelY };
+    },
+    buttonsPressed(state) {
+      return { up: state.upPressed, down: state.downPressed, right: state.rightPressed, left: state.leftPressed };
     }
   },
   modules: {}

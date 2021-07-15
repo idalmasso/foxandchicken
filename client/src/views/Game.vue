@@ -1,31 +1,9 @@
 <template>
-  <h1>Game</h1>
   <div>
-    {{ positions }}
-    <button
-      @mousedown="setAcceleration({ accelX: 0, accelY: 1 })"
-      @mouseup="setAcceleration({ accelX: 0, accelY: 0 })"
-    >
-      up
-    </button>
-    <button
-      @mousedown="setAcceleration({ accelX: 1, accelY: 0 })"
-      @mouseup="setAcceleration({ accelX: 0, accelY: 0 })"
-    >
-      toleft
-    </button>
-    <button
-      @mousedown="setAcceleration({ accelX: -1, accelY: 0 })"
-      @mouseup="setAcceleration({ accelX: 0, accelY: 0 })"
-    >
-      right
-    </button>
-    <button
-      @mousedown="setAcceleration({ accelX: 0, accelY: -1 })"
-      @mouseup="setAcceleration({ accelX: 0, accelY: 0 })"
-    >
-      down
-    </button>
+    <h1>Game</h1>
+    <div>
+      {{ positions }}
+    </div>
   </div>
 </template>
 
@@ -40,8 +18,46 @@ export default {
   },
   methods: {
     ...mapActions({
-      setAcceleration: 'setAcceleration'
-    })
+      changeButtonState: 'changeButtonState'
+    }),
+    keyboardHandler(event, pressed) {
+      const arrows = (code) => {
+        switch (code) {
+          case 'ArrowUp':
+          case 'KeyW':
+            this.changeButtonState({ button: 'up', isPressed: pressed });
+            break;
+          case 'ArrowDown':
+          case 'KeyS':
+            this.changeButtonState({ button: 'down', isPressed: pressed });
+            break;
+          case 'ArrowLeft':
+          case 'KeyA':
+            this.changeButtonState({ button: 'left', isPressed: pressed });
+            break;
+          case 'ArrowRight':
+          case 'KeyD':
+            this.changeButtonState({ button: 'right', isPressed: pressed });
+            break;
+          default:
+            console.log(code);
+        }
+      };
+      switch (event.code) {
+        case 'Space':
+          break;
+        default:
+          arrows(event.code);
+      }
+    }
+  },
+  mounted() {
+    document.addEventListener('keydown', (event) => this.keyboardHandler(event, true));
+    document.addEventListener('keyup', (event) => this.keyboardHandler(event, false));
+  },
+  unmounted() {
+    document.removeEventListener('keydown', (event) => this.keyboardHandler(event, true));
+    document.addEventListener('keyup', (event) => this.keyboardHandler(event, false));
   }
 };
 </script>

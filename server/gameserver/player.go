@@ -43,6 +43,7 @@ func (p *Player) UpdateWebSocket(conn *websocket.Conn) {
 //PlayerCycle is the cycle of a player when not in the room
 func (p *Player) PlayerCycle() {
 	if err := p.ReadUsername(); err != nil {
+		log.Println("Error reading username, returning")
 		return
 	}
 	go p.PlayerBroadcastListener()
@@ -55,9 +56,11 @@ func (p *Player) PlayerCycle() {
 				log.Println("ERROR "+p.username, "cannot decode the message", err.Error())
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
 			} else {
+				log.Println(p.username, "Timeout")
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
 				p.Close()
 				p.GameInstance.RemovePlayer(p.username)
+				log.Println(p.username, "End of player cycle")
 				return
 			}
 		}
@@ -73,7 +76,7 @@ func (p *Player) PlayerCycle() {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
 				p.mutex.Unlock()
 				if err := p.PlayerRoomInputCycle(); err != nil {
-					p.EndPlayer <- true
+					p.Close()
 					return
 				}
 
@@ -88,7 +91,7 @@ func (p *Player) PlayerCycle() {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
 				p.mutex.Unlock()
 				if err := p.PlayerRoomInputCycle(); err != nil {
-					p.EndPlayer <- true
+					p.Close()
 					return
 				}
 			}
@@ -204,6 +207,7 @@ func NewPlayer(instance *game.GameInstance) *Player {
 	p.GameInstance = instance
 	p.IsInRoom = false
 	p.EndGameChannel = make(chan bool)
+	p.EndPlayer = make(chan bool)
 	p.IsClosing = false
 	return &p
 }
@@ -213,19 +217,19 @@ func (p *Player) PlayerBroadcastListener() {
 	for {
 		select {
 		case <-p.EndPlayer:
-			log.Println("Player Broadcast exit" + p.username)
 			close(p.EndPlayer)
+			log.Println(p.username, "PlayerBroadcastListener exit")
 			return
 		case m := <-p.GameInstance.PlayerDataChannelsBroadcasts[p.username]:
+			log.Println(p.username, "PlayerBroadcastListener", "Game server lock")
 			p.mutex.Lock()
 			if !p.IsClosing {
 				switch m.GetMessageType() {
 				default:
-					p.mutex.Lock()
 					p.Conn.WriteJSON(singleStringReturnMessage{Message: "got message broadcast" + m.ErrorMessage()})
-					p.mutex.Unlock()
 				}
 			}
+			log.Println(p.username, "PlayerBroadcastListener", "Game server unlock")
 			p.mutex.Unlock()
 		}
 	}
@@ -233,15 +237,16 @@ func (p *Player) PlayerBroadcastListener() {
 
 //Close close the player handles
 func (p *Player) Close() {
+	log.Println(p.username, "Player close start")
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	p.IsClosing=true
+	p.IsClosing = true
+
 	if p.IsInRoom {
 		p.EndGameChannel <- true
-		
+
 	}
-	
 	p.EndPlayer <- true
 	p.Conn.Close()
-
+	log.Println(p.username, "Player close end")
 }

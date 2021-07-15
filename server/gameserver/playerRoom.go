@@ -34,11 +34,21 @@ func (p *Player) PlayerRoomInputCycle() error {
 			var jErr *json.SyntaxError
 			if errors.As(err, &jErr) {
 				log.Println("ERROR "+p.username, "cannot decode the message", err.Error())
+				log.Println(p.username, "Game server Lock no decode")
+				p.mutex.Lock()
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
+				log.Println(p.username, "Game server unlock no decode")
+				p.mutex.Unlock()
 			} else {
+				log.Println(p.username, "Timeout")
+				log.Println(p.username, "Game server Lock timeout")
+				p.mutex.Lock()
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
+				log.Println(p.username, "Game server unlock timeout")
+				p.mutex.Unlock()
 				p.Close()
 				p.GameInstance.RemovePlayer(p.username)
+				log.Println(p.username, "End of player room cycle")
 				return err
 			}
 		}
@@ -49,16 +59,22 @@ func (p *Player) PlayerRoomInputCycle() error {
 		switch mex.GetAction() {
 		case ActionMessageLeaveRoom:
 			if err := p.tryLeaveRoom(); err != nil {
+				log.Println(p.username, "Game server Lock")
 				p.mutex.Lock()
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: err.Error()})
 				p.EndGameChannel <- true
+				log.Println(p.username, "Game server Unlock")
 				p.mutex.Unlock()
-				return nil
+				log.Println(p.username, "Leave room - End of player room cycle WITH ERROR", err.Error())
+				return err
 			} else {
+				log.Println(p.username, "Game server Lock ok leave room")
 				p.mutex.Lock()
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
 				p.EndGameChannel <- true
+				log.Println(p.username, "Game server Unlock ok leave room")
 				p.mutex.Unlock()
+				log.Println(p.username, "Leave room - End of player room cycle no error")
 				return nil
 			}
 		case ActionMessageMovement:
@@ -72,17 +88,18 @@ func (p *Player) PlayerRoomInputCycle() error {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "message not recognized"})
 				p.mutex.Unlock()
 			} else {
-				p.mutex.Lock()
 				position := common.Vector2{X: m.PositionX, Y: m.PositionY}
 				velocity := common.Vector2{X: m.VelocityX, Y: m.VelocityY}
 				acceleration := common.Vector2{X: m.AccelerationX, Y: m.AccelerationY}
 				sMex := messaging.CommRoomMessageMovePlayer{Player: p.username, Position: position, Velocity: velocity, Rotation: m.Rotation, Acceleration: acceleration}
+				log.Println(p.username, "Send message movement")
 				p.RoomChannel <- &sMex
-				p.mutex.Unlock()
 			}
 		default:
+			log.Println(p.username, "Game server Lock no rec")
 			p.mutex.Lock()
 			p.Conn.WriteJSON(singleStringReturnMessage{Message: "action not recognized"})
+			log.Println(p.username, "Game server Unlock no rec")
 			p.mutex.Unlock()
 		}
 
@@ -95,9 +112,11 @@ func (p *Player) PlayerRoomGameCycle() {
 		select {
 		case <-p.EndGameChannel:
 			close(p.EndGameChannel)
+			log.Println(p.username, "Player end of PlayerRoomGameCycle")
 			return
 		case v := <-p.RoomChannelOutput:
-				p.mutex.Lock()
+			log.Println(p.username, "Game server Lock")
+			p.mutex.Lock()
 			if !p.IsClosing {
 				switch v.GetMessageType() {
 				case messaging.RoomMessageTypePlayersMovement:
@@ -110,7 +129,9 @@ func (p *Player) PlayerRoomGameCycle() {
 					p.Conn.WriteJSON(message{Action: "LEAVEROOM", Message: mex.Player})
 				}
 			}
+			log.Println(p.username, "Game server UnLock")
 			p.mutex.Unlock()
+
 		}
 	}
 }

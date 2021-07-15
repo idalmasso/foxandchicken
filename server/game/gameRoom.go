@@ -10,10 +10,11 @@ import (
 )
 
 //GameRoomNumPlayer is the struct that returns the data about number rooms and players in that
-type GameRoomNumPlayer struct{
-	Name string `json:"name"`
-	Players int `json:"players"`
+type GameRoomNumPlayer struct {
+	Name    string `json:"name"`
+	Players int    `json:"players"`
 }
+
 //GameRoom struct containing the game room data
 type GameRoom struct {
 	Name               string `json:"name"`
@@ -42,7 +43,7 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 	g.MaxAcceleration = 1
 	g.MaxVelocity = 2
 	g.Drag = 0.9
-	g.RoomOutputChannels = make(map[string]chan messaging.RoomMessageValue )
+	g.RoomOutputChannels = make(map[string]chan messaging.RoomMessageValue)
 	return &g
 }
 
@@ -59,18 +60,19 @@ func (g *GameRoom) Run() {
 		}
 		select {
 		case val := <-g.RoomInputChannel:
+			log.Println("Read room input channel")
 			if val != nil {
 				switch val.GetMessageType() {
-
 				case messaging.RoomMessageTypeMovePlayer:
 					m := val.(*messaging.CommRoomMessageMovePlayer)
-					//todo: Remove this line
-					log.Println("Player", m.Player, "move in room", g.Name)
 					g.playerInput(m)
 
 				}
+			} else {
+				log.Println("Got a null room message")
 			}
 		default:
+			log.Println("Game cycle")
 			g.gameCycle()
 		}
 
@@ -79,12 +81,13 @@ func (g *GameRoom) Run() {
 
 //broadcastMessage send a message to all players in room
 func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
-	//log.Printf("room %s broadcast %T", g.Name, message.GetMessageType())
+	log.Printf("room %s broadcast %T", g.Name, message.GetMessageType())
 
 	for p := range g.Players {
 		//log.Println("---Send message to", p)
 		g.RoomOutputChannels[p] <- message
 	}
+	log.Printf("room %s broadcasted %T", g.Name, message.GetMessageType())
 }
 
 //Right by now it will be ALL on frontend... Next->checks
@@ -104,11 +107,12 @@ func (g *GameRoom) gameCycle() {
 		p.mutex.Lock()
 		g.movePlayer(p, timeDelta)
 		p.timestamp = newTimestamp
-		p.mutex.Unlock()
 		var m messaging.CommRoomMessageMovePlayer
 		m.Position = p.Position
 		m.Rotation = p.Rotation
 		m.Velocity = p.Velocity
+		m.Acceleration = p.Acceleration
+		p.mutex.Unlock()
 		m.Player = username
 		m.Timestamp = newTimestamp
 		message[i] = m
@@ -123,12 +127,6 @@ func (g *GameRoom) movePlayer(p *PlayerGameData, deltaT time.Duration) {
 	ts := deltaT.Seconds()
 	p.Position = common.VectorSum(p.Position, p.Velocity.ScalarProduct(ts))
 	p.Position = p.Position.ClampVector(0, g.sizeX, 0, g.sizeY)
-	if p.Position.X < 0 {
-		p.Position.X = 0
-	}
-	if p.Position.X > g.sizeX {
-		p.Position.X = g.sizeX
-	}
 	if p.Acceleration.X == 0 && p.Acceleration.Y == 0 {
 		magnitude := p.Velocity.SqrtMagnitude()
 		if magnitude < 0.01 {
@@ -141,7 +139,7 @@ func (g *GameRoom) movePlayer(p *PlayerGameData, deltaT time.Duration) {
 		p.Velocity = common.VectorSum(p.Velocity, p.Acceleration.ScalarProduct(ts))
 		magnitude := p.Velocity.SqrtMagnitude()
 
-		if magnitude > float64(g.MaxVelocity) {
+		if magnitude > g.MaxVelocity {
 			p.Velocity = p.Velocity.ScalarProduct(g.MaxVelocity / magnitude)
 		}
 	}
@@ -150,8 +148,12 @@ func (g *GameRoom) movePlayer(p *PlayerGameData, deltaT time.Duration) {
 
 //Right by now it will be ALL on frontend... Next->checks
 func (g *GameRoom) playerInput(m *messaging.CommRoomMessageMovePlayer) {
+	log.Println(m.Player, "playerInput Lock")
 	g.Players[m.Player].mutex.Lock()
-	defer g.Players[m.Player].mutex.Unlock()
+	defer func() {
+		g.Players[m.Player].mutex.Unlock()
+		log.Println(m.Player, "playerInput UnLock")
+	}()
 	newTimestamp := time.Now().UnixNano()
 	if m.Timestamp > newTimestamp || m.Timestamp == 0 {
 		m.Timestamp = newTimestamp
@@ -159,7 +161,7 @@ func (g *GameRoom) playerInput(m *messaging.CommRoomMessageMovePlayer) {
 
 	magnitude := m.Acceleration.SqrtMagnitude()
 
-	if magnitude > float64(g.MaxAcceleration) {
+	if magnitude > g.MaxAcceleration {
 		m.Acceleration = m.Acceleration.ScalarProduct(g.MaxAcceleration / magnitude)
 	}
 	g.Players[m.Player].Rotation = m.Rotation
@@ -173,9 +175,10 @@ func (g *GameRoom) playerInput(m *messaging.CommRoomMessageMovePlayer) {
 func (g *GameRoom) RemovePlayer(username string) {
 	log.Println("Removing player ", username)
 	g.mutex.Lock()
+	defer g.mutex.Unlock()
 	delete(g.Players, username)
 	delete(g.RoomOutputChannels, username)
-	g.mutex.Unlock()
+
 	g.broadcastMessage(&messaging.CommRoomMessageLeftPlayer{Player: username})
 }
 
