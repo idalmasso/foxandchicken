@@ -21,7 +21,7 @@ export default {
       changeButtonState: 'changeButtonState'
     }),
     keyboardHandler(event, pressed) {
-      const arrows = (code) => {
+      const arrows = code => {
         switch (code) {
           case 'ArrowUp':
           case 'KeyW':
@@ -49,15 +49,21 @@ export default {
         default:
           arrows(event.code);
       }
+    },
+    keyDown(event) {
+      this.keyboardHandler(event, true);
+    },
+    keyUp(event) {
+      this.keyboardHandler(event, false);
     }
   },
   mounted() {
-    document.addEventListener('keydown', (event) => this.keyboardHandler(event, true));
-    document.addEventListener('keyup', (event) => this.keyboardHandler(event, false));
+    document.addEventListener('keydown', this.keyDown);
+    document.addEventListener('keyup', this.keyUp);
   },
   unmounted() {
-    document.removeEventListener('keydown', (event) => this.keyboardHandler(event, true));
-    document.addEventListener('keyup', (event) => this.keyboardHandler(event, false));
+    document.removeEventListener('keydown', this.keyDown);
+    document.removeEventListener('keyup', this.keyUp);
   }
 };
 </script>

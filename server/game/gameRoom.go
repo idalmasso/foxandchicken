@@ -2,6 +2,7 @@ package game
 
 import (
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -42,7 +43,7 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 	g.sizeX, g.sizeY = 100, 100
 	g.MaxAcceleration = 1
 	g.MaxVelocity = 2
-	g.Drag = 0.9
+	g.Drag = 0.95
 	g.RoomOutputChannels = make(map[string]chan messaging.RoomMessageValue)
 	return &g
 }
@@ -93,7 +94,6 @@ func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 //Right by now it will be ALL on frontend... Next->checks
 func (g *GameRoom) gameCycle() {
 	newTimestamp := time.Now().UnixNano()
-	timeDelta := time.Duration(newTimestamp - g.timestamp)
 	g.mutex.Lock()
 	defer func() {
 		g.mutex.Unlock()
@@ -105,7 +105,7 @@ func (g *GameRoom) gameCycle() {
 	for username, p := range g.Players {
 		//CALL MOVEPLAYER FOR ALL PLAYERS HERE
 		p.mutex.Lock()
-		g.movePlayer(p, timeDelta)
+		g.movePlayer(p, time.Duration(newTimestamp-p.timestamp))
 		p.timestamp = newTimestamp
 		var m messaging.CommRoomMessageMovePlayer
 		m.Position = p.Position
@@ -128,12 +128,14 @@ func (g *GameRoom) movePlayer(p *PlayerGameData, deltaT time.Duration) {
 	p.Position = common.VectorSum(p.Position, p.Velocity.ScalarProduct(ts))
 	p.Position = p.Position.ClampVector(0, g.sizeX, 0, g.sizeY)
 	if p.Acceleration.X == 0 && p.Acceleration.Y == 0 {
+		
 		magnitude := p.Velocity.SqrtMagnitude()
-		if magnitude < 0.01 {
+		if magnitude < 0.15 {
 			p.Velocity.X = 0
 			p.Velocity.Y = 0
 			return
 		}
+		
 		p.Velocity = common.VectorSum(p.Velocity, p.Velocity.ScalarProduct(-g.Drag*ts))
 	} else {
 		p.Velocity = common.VectorSum(p.Velocity, p.Acceleration.ScalarProduct(ts))
@@ -143,7 +145,12 @@ func (g *GameRoom) movePlayer(p *PlayerGameData, deltaT time.Duration) {
 			p.Velocity = p.Velocity.ScalarProduct(g.MaxVelocity / magnitude)
 		}
 	}
-
+	if math.Abs(p.Acceleration.X)==0 && math.Abs(p.Velocity.X) < 0.1 {
+			p.Velocity.X = 0
+	}
+	if math.Abs(p.Acceleration.Y)==0 && math.Abs(p.Velocity.Y) < 0.1 {
+		p.Velocity.Y = 0
+	} 
 }
 
 //Right by now it will be ALL on frontend... Next->checks

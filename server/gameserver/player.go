@@ -77,6 +77,7 @@ func (p *Player) PlayerCycle() {
 				p.mutex.Unlock()
 				if err := p.PlayerRoomInputCycle(); err != nil {
 					p.Close()
+					p.GameInstance.RemovePlayer(p.username)
 					return
 				}
 
@@ -240,13 +241,15 @@ func (p *Player) Close() {
 	log.Println(p.username, "Player close start")
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	p.IsClosing = true
+	if !p.IsClosing {
+		p.IsClosing = true
 
-	if p.IsInRoom {
-		p.EndGameChannel <- true
+		if p.IsInRoom {
+			p.EndGameChannel <- true
 
+		}
+		p.EndPlayer <- true
+		p.Conn.Close()
+		log.Println(p.username, "Player close end")
 	}
-	p.EndPlayer <- true
-	p.Conn.Close()
-	log.Println(p.username, "Player close end")
 }

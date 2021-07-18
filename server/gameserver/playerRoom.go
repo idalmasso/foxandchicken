@@ -46,8 +46,7 @@ func (p *Player) PlayerRoomInputCycle() error {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
 				log.Println(p.username, "Game server unlock timeout")
 				p.mutex.Unlock()
-				p.Close()
-				p.GameInstance.RemovePlayer(p.username)
+				
 				log.Println(p.username, "End of player room cycle")
 				return err
 			}
