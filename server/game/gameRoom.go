@@ -50,8 +50,10 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 
 //Run is the GameRoom main call
 func (g *GameRoom) Run() {
+	log.Println("Run - Lock")
 	g.mutex.Lock()
 	g.timestamp = time.Now().UnixNano()
+	log.Println("Run - UnLock")
 	g.mutex.Unlock()
 	for {
 		if len(g.Players) == 0 {
@@ -75,6 +77,7 @@ func (g *GameRoom) Run() {
 		default:
 			log.Println("Game cycle")
 			g.gameCycle()
+			log.Println("End Game cycle")
 		}
 
 	}
@@ -86,7 +89,9 @@ func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 
 	for p := range g.Players {
 		//log.Println("---Send message to", p)
-		g.RoomOutputChannels[p] <- message
+		if g.Instance.Players[p] == g.Name {
+			g.RoomOutputChannels[p] <- message
+		}
 	}
 	log.Printf("room %s broadcasted %T", g.Name, message.GetMessageType())
 }
@@ -94,8 +99,10 @@ func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 //Right by now it will be ALL on frontend... Next->checks
 func (g *GameRoom) gameCycle() {
 	newTimestamp := time.Now().UnixNano()
+	log.Println("gameCycle - Lock")
 	g.mutex.Lock()
 	defer func() {
+		log.Println("gameCycle - Unlock")
 		g.mutex.Unlock()
 		time.Sleep(time.Millisecond * 50)
 	}()
@@ -103,8 +110,9 @@ func (g *GameRoom) gameCycle() {
 	i := 0
 
 	for username, p := range g.Players {
-		//CALL MOVEPLAYER FOR ALL PLAYERS HERE
+
 		p.mutex.Lock()
+
 		g.movePlayer(p, time.Duration(newTimestamp-p.timestamp))
 		p.timestamp = newTimestamp
 		var m messaging.CommRoomMessageMovePlayer
@@ -118,6 +126,7 @@ func (g *GameRoom) gameCycle() {
 		message[i] = m
 		i++
 	}
+	log.Println("Game cycle broadcasting move")
 	g.broadcastMessage(&message)
 	g.timestamp = newTimestamp
 
@@ -128,14 +137,14 @@ func (g *GameRoom) movePlayer(p *PlayerGameData, deltaT time.Duration) {
 	p.Position = common.VectorSum(p.Position, p.Velocity.ScalarProduct(ts))
 	p.Position = p.Position.ClampVector(0, g.sizeX, 0, g.sizeY)
 	if p.Acceleration.X == 0 && p.Acceleration.Y == 0 {
-		
+
 		magnitude := p.Velocity.SqrtMagnitude()
 		if magnitude < 0.15 {
 			p.Velocity.X = 0
 			p.Velocity.Y = 0
 			return
 		}
-		
+
 		p.Velocity = common.VectorSum(p.Velocity, p.Velocity.ScalarProduct(-g.Drag*ts))
 	} else {
 		p.Velocity = common.VectorSum(p.Velocity, p.Acceleration.ScalarProduct(ts))
@@ -145,12 +154,12 @@ func (g *GameRoom) movePlayer(p *PlayerGameData, deltaT time.Duration) {
 			p.Velocity = p.Velocity.ScalarProduct(g.MaxVelocity / magnitude)
 		}
 	}
-	if math.Abs(p.Acceleration.X)==0 && math.Abs(p.Velocity.X) < 0.1 {
-			p.Velocity.X = 0
+	if math.Abs(p.Acceleration.X) == 0 && math.Abs(p.Velocity.X) < 0.1 {
+		p.Velocity.X = 0
 	}
-	if math.Abs(p.Acceleration.Y)==0 && math.Abs(p.Velocity.Y) < 0.1 {
+	if math.Abs(p.Acceleration.Y) == 0 && math.Abs(p.Velocity.Y) < 0.1 {
 		p.Velocity.Y = 0
-	} 
+	}
 }
 
 //Right by now it will be ALL on frontend... Next->checks
@@ -158,8 +167,9 @@ func (g *GameRoom) playerInput(m *messaging.CommRoomMessageMovePlayer) {
 	log.Println(m.Player, "playerInput Lock")
 	g.Players[m.Player].mutex.Lock()
 	defer func() {
-		g.Players[m.Player].mutex.Unlock()
 		log.Println(m.Player, "playerInput UnLock")
+		g.Players[m.Player].mutex.Unlock()
+
 	}()
 	newTimestamp := time.Now().UnixNano()
 	if m.Timestamp > newTimestamp || m.Timestamp == 0 {
@@ -180,9 +190,14 @@ func (g *GameRoom) playerInput(m *messaging.CommRoomMessageMovePlayer) {
 
 //RemovePlayer removes a player from the room
 func (g *GameRoom) RemovePlayer(username string) {
-	log.Println("Removing player ", username)
+	log.Println("Room removing player ", username)
+	log.Println("RemovePlayer - Lock")
 	g.mutex.Lock()
-	defer g.mutex.Unlock()
+	defer func() {
+		log.Println("RemovePlayer - Unlock")
+		g.mutex.Unlock()
+	}()
+
 	delete(g.Players, username)
 	delete(g.RoomOutputChannels, username)
 

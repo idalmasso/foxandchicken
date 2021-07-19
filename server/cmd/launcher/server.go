@@ -27,7 +27,7 @@ func main() {
 	var webServer gameserver.GameServer
 	webServer.Instance = gameInstance
 	go gameInstance.GameInstanceRun()
-	
+
 	FileServer(r)
 	r.Get("/api/ws", webServer.ManageRequest)
 	panic(server.ListenAndServe())

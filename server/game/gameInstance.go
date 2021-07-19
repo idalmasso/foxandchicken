@@ -43,15 +43,16 @@ func (instance *GameInstance) setPlayerWaiting(username string) {
 
 //RemovePlayer removes a player from the instance
 func (instance *GameInstance) RemovePlayer(username string) {
-	instance.mutex.Lock()
-	defer instance.mutex.Unlock()
+
 	if roomName, ok := instance.Players[username]; ok {
 		if room, ok := instance.Rooms[roomName]; ok {
+			instance.Players[username] = ""
 			room.RemovePlayer(username)
 		}
 
 	}
-
+	instance.mutex.Lock()
+	defer instance.mutex.Unlock()
 	delete(instance.Players, username)
 	delete(instance.PlayersWaiting, username)
 	close(instance.PlayerDataChannels[username])
@@ -92,22 +93,15 @@ func (g *GameInstance) GameInstanceRun() {
 							okMessage.Message = "Player already inside a room"
 							p <- &okMessage
 						} else {
-							g.mutex.Lock()
-							if _, ok = g.Rooms[message.Name]; !ok {
-								room := createRoom(message.Name, g)
-								g.Rooms[room.Name] = room
-								okMessage.RoomChannel = room.RoomInputChannel
-								room.AddPlayer(message.Player)
-								okMessage.RoomResponseChannel = room.RoomOutputChannels[message.Player]
-								delete(g.PlayersWaiting, message.Player)
-								g.Players[message.Player] = room.Name
-								go room.Run()
-								p <- &okMessage
+							if room, err := g.tryCreateRoom(message.Name); err != nil {
+								okMessage.Message = err.Error()
 							} else {
-								okMessage.Message = "Room already exists"
-								p <- &okMessage
+								g.addPlayerToRoom(room, message.Player)
+								okMessage.RoomResponseChannel = room.RoomOutputChannels[message.Player]
+								okMessage.RoomChannel = room.RoomInputChannel
+								go room.Run()
 							}
-							g.mutex.Unlock()
+							p <- &okMessage
 						}
 					}
 				case messaging.RoomMessageTypeJoinPlayer:
@@ -125,13 +119,9 @@ func (g *GameInstance) GameInstanceRun() {
 						if roomOfPlayer, ok := g.Players[message.Player]; ok {
 							if roomOfPlayer == "" {
 								room.broadcastMessage(message)
-								room.AddPlayer(message.Player)
+								g.addPlayerToRoom(room, message.Player)
 								r.RoomResponseChannel = room.RoomOutputChannels[message.Player]
 								r.RoomChannel = room.RoomInputChannel
-								g.mutex.Lock()
-								delete(g.PlayersWaiting, message.Player)
-								g.Players[message.Player] = room.Name
-								g.mutex.Unlock()
 							} else if roomOfPlayer != message.Name {
 								r.Message = "already in room " + roomOfPlayer
 							}
@@ -166,6 +156,26 @@ func (g *GameInstance) GameInstanceRun() {
 
 	}
 }
+func (g *GameInstance) tryCreateRoom(room string) (*GameRoom, error) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	log.Println("tryCreateRoom - Start")
+	if _, ok := g.Rooms[room]; !ok {
+		room := createRoom(room, g)
+		g.Rooms[room.Name] = room
+		return room, nil
+	} else {
+		return nil, fmt.Errorf("Room already exists")
+
+	}
+}
+func (g *GameInstance) addPlayerToRoom(room *GameRoom, player string) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	room.AddPlayer(player)
+	delete(g.PlayersWaiting, player)
+	g.Players[player] = room.Name
+}
 
 //removeRoom removes a room from an instance
 func (g *GameInstance) removeRoom(room string) {
@@ -191,15 +201,16 @@ func (g *GameInstance) broadCastMessageAllPlayers(message messaging.InstanceMess
 	}
 }
 
-func (g *GameInstance) GetRooms() []GameRoomNumPlayer{
+func (g *GameInstance) GetRooms() []GameRoomNumPlayer {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 	rooms := make([]GameRoomNumPlayer, len(g.Rooms))
-	counter:=0
-	for name, room:=range(g.Rooms){
+	counter := 0
+	for name, room := range g.Rooms {
 		gameRoom := GameRoomNumPlayer{Name: name, Players: len(room.Players)}
-		rooms[counter]=gameRoom
+		rooms[counter] = gameRoom
 		counter++
 	}
+
 	return rooms
 }

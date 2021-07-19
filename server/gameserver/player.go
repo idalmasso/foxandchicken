@@ -58,8 +58,9 @@ func (p *Player) PlayerCycle() {
 			} else {
 				log.Println(p.username, "Timeout")
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
-				p.Close()
 				p.GameInstance.RemovePlayer(p.username)
+				p.Close()
+
 				log.Println(p.username, "End of player cycle")
 				return
 			}
@@ -76,8 +77,9 @@ func (p *Player) PlayerCycle() {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
 				p.mutex.Unlock()
 				if err := p.PlayerRoomInputCycle(); err != nil {
-					p.Close()
 					p.GameInstance.RemovePlayer(p.username)
+					p.Close()
+
 					return
 				}
 
@@ -92,11 +94,12 @@ func (p *Player) PlayerCycle() {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
 				p.mutex.Unlock()
 				if err := p.PlayerRoomInputCycle(); err != nil {
+					p.GameInstance.RemovePlayer(p.username)
 					p.Close()
 					return
 				}
 			}
-		case ActionListRooms:
+		case ActionMessageListRooms:
 			rooms := p.GameInstance.GetRooms()
 			p.mutex.Lock()
 			p.Conn.WriteJSON(rooms)
@@ -223,15 +226,17 @@ func (p *Player) PlayerBroadcastListener() {
 			return
 		case m := <-p.GameInstance.PlayerDataChannelsBroadcasts[p.username]:
 			log.Println(p.username, "PlayerBroadcastListener", "Game server lock")
-			p.mutex.Lock()
 			if !p.IsClosing {
-				switch m.GetMessageType() {
-				default:
-					p.Conn.WriteJSON(singleStringReturnMessage{Message: "got message broadcast" + m.ErrorMessage()})
+				p.mutex.Lock()
+				if !p.IsClosing {
+					switch m.GetMessageType() {
+					default:
+						p.Conn.WriteJSON(singleStringReturnMessage{Message: "got message broadcast" + m.ErrorMessage()})
+					}
+					log.Println(p.username, "PlayerBroadcastListener", "Game server unlock")
 				}
+				p.mutex.Unlock()
 			}
-			log.Println(p.username, "PlayerBroadcastListener", "Game server unlock")
-			p.mutex.Unlock()
 		}
 	}
 }
@@ -245,7 +250,9 @@ func (p *Player) Close() {
 		p.IsClosing = true
 
 		if p.IsInRoom {
+
 			p.EndGameChannel <- true
+			close(p.EndGameChannel)
 
 		}
 		p.EndPlayer <- true

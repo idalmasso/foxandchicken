@@ -26,6 +26,9 @@ export default {
   },
   onMessagePositionEvent(event, context) {
     const message = JSON.parse(event.data);
-    context.commit('SETPOSITIONS', message);
+    console.log(message);
+    if (message.action === 'MOVES') {
+      context.commit('SETPOSITIONS', message.message);
+    }
   }
 };

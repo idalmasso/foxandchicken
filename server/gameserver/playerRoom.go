@@ -46,7 +46,7 @@ func (p *Player) PlayerRoomInputCycle() error {
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
 				log.Println(p.username, "Game server unlock timeout")
 				p.mutex.Unlock()
-				
+
 				log.Println(p.username, "End of player room cycle")
 				return err
 			}
@@ -60,8 +60,8 @@ func (p *Player) PlayerRoomInputCycle() error {
 			if err := p.tryLeaveRoom(); err != nil {
 				log.Println(p.username, "Game server Lock")
 				p.mutex.Lock()
+				p.IsInRoom = false
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: err.Error()})
-				p.EndGameChannel <- true
 				log.Println(p.username, "Game server Unlock")
 				p.mutex.Unlock()
 				log.Println(p.username, "Leave room - End of player room cycle WITH ERROR", err.Error())
@@ -70,7 +70,9 @@ func (p *Player) PlayerRoomInputCycle() error {
 				log.Println(p.username, "Game server Lock ok leave room")
 				p.mutex.Lock()
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
+				p.IsInRoom = false
 				p.EndGameChannel <- true
+				close(p.EndGameChannel)
 				log.Println(p.username, "Game server Unlock ok leave room")
 				p.mutex.Unlock()
 				log.Println(p.username, "Leave room - End of player room cycle no error")
@@ -110,7 +112,6 @@ func (p *Player) PlayerRoomGameCycle() {
 	for {
 		select {
 		case <-p.EndGameChannel:
-			close(p.EndGameChannel)
 			log.Println(p.username, "Player end of PlayerRoomGameCycle")
 			return
 		case v := <-p.RoomChannelOutput:
@@ -121,11 +122,16 @@ func (p *Player) PlayerRoomGameCycle() {
 				case messaging.RoomMessageTypePlayersMovement:
 					moves := v.(*messaging.CommRoomMessagePlayersMovement)
 					//log.Println("received message move>", move.Player)
-					p.Conn.WriteJSON(moves)
+					if data, err := json.Marshal(moves); err == nil {
+						p.Conn.WriteJSON(message{Action: ActionMessageMovesRoom, Message: string(data)})
+					} else {
+						log.Println("Error: ", err.Error())
+					}
+
 				case messaging.RoomMessageTypeLeftPlayer:
 					mex := v.(*messaging.CommRoomMessageLeftPlayer)
 					//log.Println("received message move>", move.Player)
-					p.Conn.WriteJSON(message{Action: "LEAVEROOM", Message: mex.Player})
+					p.Conn.WriteJSON(message{Action: ActionMessageLeaveRoom, Message: mex.Player})
 				}
 			}
 			log.Println(p.username, "Game server UnLock")

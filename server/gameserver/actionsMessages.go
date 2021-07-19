@@ -12,7 +12,9 @@ const (
 	//ActionMessageMovement is the action to send a movement
 	ActionMessageMovement actionMessageTypes = "MOVEMENT"
 	//ActionListRooms is the action to request a list for all rooms
-	ActionListRooms actionMessageTypes = "LISTROOMS"
+	ActionMessageListRooms actionMessageTypes = "LISTROOMS"
+	//ActionMovesRoom is the message with the movements for all players
+	ActionMessageMovesRoom actionMessageTypes = "MOVES"
 )
 
 type movementStruct struct {
