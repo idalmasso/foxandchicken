@@ -221,20 +221,20 @@ func (p *Player) PlayerBroadcastListener() {
 	for {
 		select {
 		case <-p.EndPlayer:
-			close(p.EndPlayer)
 			log.Println(p.username, "PlayerBroadcastListener exit")
 			return
 		case m := <-p.GameInstance.PlayerDataChannelsBroadcasts[p.username]:
 			log.Println(p.username, "PlayerBroadcastListener", "Game server lock")
-			if !p.IsClosing {
+			if m != nil {
 				p.mutex.Lock()
+
 				if !p.IsClosing {
 					switch m.GetMessageType() {
 					default:
 						p.Conn.WriteJSON(singleStringReturnMessage{Message: "got message broadcast" + m.ErrorMessage()})
 					}
-					log.Println(p.username, "PlayerBroadcastListener", "Game server unlock")
 				}
+				log.Println(p.username, "PlayerBroadcastListener", "Game server unlock")
 				p.mutex.Unlock()
 			}
 		}
