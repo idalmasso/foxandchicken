@@ -1,9 +1,6 @@
 <template>
   <div>
     <h1>Game</h1>
-    <div>
-      {{ positions }}
-    </div>
     <div id="container"></div>
   </div>
 </template>
@@ -18,14 +15,15 @@ export default {
       camera: null,
       scene: null,
       renderer: null,
-      mesh: null,
+      meshes: null,
       now: undefined,
       createdBox: false
     };
   },
   computed: {
     ...mapGetters({
-      positions: 'positions'
+      positions: 'positions',
+      username: 'username'
     })
   },
   methods: {
@@ -36,9 +34,17 @@ export default {
       const container = document.getElementById('container');
 
       this.camera = new Three.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.01, 10);
-      this.camera.position.z = 1;
+      this.camera.position.z = 10;
       this.scene = new Three.Scene();
-      this.addBox(0.1, 0.1, 0.1, 0, 0.1, 0.1);
+      this.meshes = [];
+      for (const username in this.positions) {
+        const position = this.positions[username].position;
+        if (username === this.username) {
+          this.meshes[username] = this.addBox(0.1, 0.1, 0.1, position.x, position.y, 0.1);
+        } else {
+          this.meshes[username] = this.addSphere(0.2, position.x, position.y, 0.1);
+        }
+      }
       this.renderer = new Three.WebGLRenderer({ antialias: true });
       this.renderer.setSize(container.clientWidth, container.clientHeight);
       container.appendChild(this.renderer.domElement);
@@ -47,25 +53,53 @@ export default {
       if (this.start === undefined) {
         this.start = timeStamp;
       }
-      const elapsed = timeStamp - this.start;
+      // const elapsed = timeStamp - this.start;
       requestAnimationFrame(this.animate);
-      this.mesh.rotation.x += 0.01;
-      this.mesh.rotation.y += 0.02;
-      if (elapsed > 3000 && !this.createdBox) {
-        this.addBox(0.2, 0.2, 0.2, -0.1, -0.1, -0.1);
-        this.createdBox = true;
+      for (const username in this.positions) {
+        const position = this.positions[username].position;
+        if (typeof this.meshes[username] === 'undefined') {
+          if (username === this.username) {
+            this.meshes[username] = this.addBox(0.1, 0.1, 0.1, position.x, position.y, 0.1);
+          } else {
+            this.meshes[username] = this.addSphere(0.2, position.x, position.y, 0.1);
+          }
+        } else {
+          this.meshes[username].position.x = position.x;
+          this.meshes[username].position.y = position.y;
+          this.meshes[username].rotation.x += 0.01;
+          this.meshes[username].rotation.y += 0.02;
+        }
+      }
+      for (const username in this.meshes) {
+        if (typeof this.positions[username] === 'undefined') {
+          console.log('REMOVING ' + username);
+          this.scene.remove(this.meshes[username]);
+          this.meshes.splice(username, 1);
+        }
       }
       this.renderer.render(this.scene, this.camera);
     },
     addBox(x, y, z, posX, posY, posZ) {
+      console.log('adding a box' + posX);
       const geometry = new Three.BoxGeometry(x, y, z);
       const material = new Three.MeshNormalMaterial();
-
-      this.mesh = new Three.Mesh(geometry, material);
-      this.mesh.position.x = posX;
-      this.mesh.position.y = posY;
-      this.mesh.position.z = posZ;
-      this.scene.add(this.mesh);
+      const mesh = new Three.Mesh(geometry, material);
+      mesh.position.x = posX;
+      mesh.position.y = posY;
+      mesh.position.z = posZ;
+      this.scene.add(mesh);
+      return mesh;
+    },
+    addSphere(radius, posX, posY, posZ) {
+      console.log('adding a sphere' + posX);
+      const geometry = new Three.SphereGeometry(radius);
+      const material = new Three.MeshNormalMaterial();
+      const mesh = new Three.Mesh(geometry, material);
+      mesh.position.x = posX;
+      mesh.position.y = posY;
+      mesh.position.z = posZ;
+      this.scene.add(mesh);
+      return mesh;
     },
     keyboardHandler(event, pressed) {
       const arrows = code => {

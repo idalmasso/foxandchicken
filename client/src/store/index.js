@@ -9,7 +9,7 @@ export default createStore({
     actualRoom: '',
     error: '',
     rooms: [],
-    positions: null,
+    positions: {},
     upPressed: false,
     downPressed: false,
     rightPressed: false,
@@ -201,6 +201,9 @@ export default createStore({
     }
   },
   getters: {
+    username(state) {
+      return state.username;
+    },
     connection(state) {
       return state.connection;
     },

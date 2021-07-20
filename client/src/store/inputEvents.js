@@ -26,9 +26,16 @@ export default {
   },
   onMessagePositionEvent(event, context) {
     const message = JSON.parse(event.data);
-    console.log(message);
     if (message.action === 'MOVES') {
-      context.commit('SETPOSITIONS', message.message);
+      const p = {};
+      const positions = JSON.parse(message.message);
+      // debugger;
+      for (const position of positions) {
+        p[position.player] = position;
+      }
+      context.commit('SETPOSITIONS', p);
+    } else {
+      console.log(message);
     }
   }
 };
