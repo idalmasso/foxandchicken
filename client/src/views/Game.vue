@@ -1,6 +1,9 @@
 <template>
   <div>
+    <div class="header-div">
     <h1>Game</h1>
+    <button @click="leaveRoom">Leave room</button>
+    </div>
     <div id="container"></div>
   </div>
 </template>
@@ -28,22 +31,21 @@ export default {
   },
   methods: {
     ...mapActions({
-      changeButtonState: 'changeButtonState'
+      changeButtonState: 'changeButtonState',
+      leaveRoom: 'leaveRoom'
     }),
     init() {
       const container = document.getElementById('container');
-
+      while (container.hasChildNodes()) {
+        container.removeChild(container.lastChild);
+      }
       this.camera = new Three.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.01, 10);
       this.camera.position.z = 10;
       this.scene = new Three.Scene();
       this.meshes = [];
       for (const username in this.positions) {
         const position = this.positions[username].position;
-        if (username === this.username) {
-          this.meshes[username] = this.addBox(0.1, 0.1, 0.1, position.x, position.y, 0.1);
-        } else {
-          this.meshes[username] = this.addSphere(0.2, position.x, position.y, 0.1);
-        }
+        this.addObject(position.x, position.y, username);
       }
       this.renderer = new Three.WebGLRenderer({ antialias: true });
       this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -58,11 +60,7 @@ export default {
       for (const username in this.positions) {
         const position = this.positions[username].position;
         if (typeof this.meshes[username] === 'undefined') {
-          if (username === this.username) {
-            this.meshes[username] = this.addBox(0.1, 0.1, 0.1, position.x, position.y, 0.1);
-          } else {
-            this.meshes[username] = this.addSphere(0.2, position.x, position.y, 0.1);
-          }
+          this.addObject(position.x, position.y, username);
         } else {
           this.meshes[username].position.x = position.x;
           this.meshes[username].position.y = position.y;
@@ -72,15 +70,35 @@ export default {
       }
       for (const username in this.meshes) {
         if (typeof this.positions[username] === 'undefined') {
-          console.log('REMOVING ' + username);
+          this.$showLog && console.log('REMOVING ' + username);
           this.scene.remove(this.meshes[username]);
           this.meshes.splice(username, 1);
         }
       }
       this.renderer.render(this.scene, this.camera);
     },
+    addObject(posX, posY, username) {
+      if (username === this.username) {
+        this.meshes[username] = this.addBox(0.15, 0.15, 0.15, posX, posY, 0.1);
+      } else {
+        this.meshes[username] = this.addSphere(0.15, posX, posY, 0.1);
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      var ctx = canvas.getContext('2d');
+      ctx.font = '44pt Arial';
+      ctx.fillStyle = 'white';
+      ctx.textAlign = 'center';
+      ctx.fillText(username, 128, 44);
+      var tex = new Three.Texture(canvas);
+      tex.needsUpdate = true;
+      var spriteMat = new Three.SpriteMaterial({ map: tex });
+      var sprite = new Three.Sprite(spriteMat);
+      this.meshes[username].add(sprite);
+    },
     addBox(x, y, z, posX, posY, posZ) {
-      console.log('adding a box' + posX);
+      this.$showLog && console.log('adding a box ');
       const geometry = new Three.BoxGeometry(x, y, z);
       const material = new Three.MeshNormalMaterial();
       const mesh = new Three.Mesh(geometry, material);
@@ -91,7 +109,7 @@ export default {
       return mesh;
     },
     addSphere(radius, posX, posY, posZ) {
-      console.log('adding a sphere' + posX);
+      this.$showLog && console.log('adding a sphere');
       const geometry = new Three.SphereGeometry(radius);
       const material = new Three.MeshNormalMaterial();
       const mesh = new Three.Mesh(geometry, material);
@@ -121,7 +139,7 @@ export default {
             this.changeButtonState({ button: 'right', isPressed: pressed });
             break;
           default:
-            console.log(code);
+            this.$showLog && console.log(code);
         }
       };
       switch (event.code) {
@@ -155,5 +173,16 @@ export default {
   #container {
     width: 100%;
     height: 75vh;
+  }
+  .header-div {
+    display: flex;
+    justify-content: space-between;
+  }
+  .header-div > button {
+    margin-left: auto;
+    border-radius: 15px;
+    height: 60px;
+    align-self: center;
+    background-color: cyan;
   }
 </style>

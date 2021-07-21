@@ -26,16 +26,25 @@ export default {
   },
   onMessagePositionEvent(event, context) {
     const message = JSON.parse(event.data);
-    if (message.action === 'MOVES') {
-      const p = {};
-      const positions = JSON.parse(message.message);
-      // debugger;
-      for (const position of positions) {
-        p[position.player] = position;
-      }
-      context.commit('SETPOSITIONS', p);
-    } else {
-      console.log(message);
+    const p = {};
+    var messageValue;
+    switch (message.action) {
+      case 'MOVES':
+        messageValue = JSON.parse(message.message);
+        for (const position of messageValue) {
+          p[position.player] = position;
+        }
+        context.commit('SETPOSITIONS', p);
+        break;
+      case 'LEAVEROOMRESPONSE':
+        messageValue = message.message;
+        if (messageValue.username === context.getters.username) {
+          context.commit('LEAVEROOM');
+          router.push({ name: 'Rooms' });
+        }
+        break;
+      default:
+        console.log(message);
     }
   }
 };

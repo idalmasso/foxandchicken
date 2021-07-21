@@ -68,18 +68,18 @@ export default createStore({
         conn.onmessage = event =>
           inputEvents.onMessageLoginReturn(event, context, username);
         conn.onerror = function(event) {
-          console.log('Error');
-          console.log(event);
+          this.$showLog && console.log('Error');
+          this.$showLog && console.log(event);
         };
         conn.onopen = event => {
-          console.log(event);
-          console.log('Successfully connected to the echo websocket server...');
+          this.$showLog && console.log(event);
+          this.$showLog && console.log('Successfully connected to the echo websocket server...');
           conn.send(JSON.stringify({ username: username }));
         };
         conn.onclose = event => {
-          console.log(event);
-          console.log('Connection closed');
-          context.commit('LOGOUT');
+          this.$showLog && console.log(event);
+          this.$showLog && console.log('Connection closed');
+          this.$showLog && context.commit('LOGOUT');
           router.push({ name: 'Home' });
         };
         context.commit('ADDCONNECTION', conn);
@@ -102,7 +102,7 @@ export default createStore({
       if (
         roomName !== '' &&
         context.state.connection != null &&
-        context.state.connection.username !== ''
+        context.state.username !== ''
       ) {
         context.getters.connection.onmessage = event =>
           inputEvents.onMessageCreateJoinRoomEvent(event, context, roomName);
@@ -111,11 +111,22 @@ export default createStore({
         );
       }
     },
+    leaveRoom(context) {
+      if (
+        context.state.actualRoom !== '' &&
+        context.state.connection != null &&
+        context.state.username !== ''
+      ) {
+        context.getters.connection.send(
+          JSON.stringify({ action: 'LEAVEROOM' })
+        );
+      }
+    },
     joinRoom(context, roomName) {
       if (
         roomName !== '' &&
         context.state.connection != null &&
-        context.state.connection.username !== ''
+        context.state.username !== ''
       ) {
         context.getters.connection.onmessage = event =>
           inputEvents.onMessageCreateJoinRoomEvent(event, context, roomName);

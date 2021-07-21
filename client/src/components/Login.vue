@@ -23,7 +23,7 @@ export default {
   methods: {
     ...mapActions(['login']),
     tryLogin(text) {
-      console.log(text);
+      this.$showLog && console.log(text);
       this.login(text);
     }
   }

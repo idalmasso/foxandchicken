@@ -15,6 +15,8 @@ const (
 	ActionMessageListRooms actionMessageTypes = "LISTROOMS"
 	//ActionMovesRoom is the message with the movements for all players
 	ActionMessageMovesRoom actionMessageTypes = "MOVES"
+	//ActionMessageLeaveRoomResponse is the response to a leaveroom message
+	ActionMessageLeaveRoomResponse actionMessageTypes = "LEAVEROOMRESPONSE"
 )
 
 type movementStruct struct {
@@ -57,4 +59,9 @@ type genericMessage struct {
 //GetAction returns the action of the message
 func (m genericMessage) GetAction() actionMessageTypes {
 	return m.Action
+}
+
+type usernameErrorMessage struct {
+	Username string `json:"username"`
+	Error    string `json:"error"`
 }

@@ -5,6 +5,7 @@
 <script>
 import TheApplicationBar from './components/TheApplicationBar.vue';
 export default {
+  customOption: 'foo',
   components: { TheApplicationBar },
   data() {
     return {

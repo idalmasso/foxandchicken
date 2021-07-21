@@ -61,7 +61,7 @@ func (p *Player) PlayerRoomInputCycle() error {
 				log.Println(p.username, "Game server Lock")
 				p.mutex.Lock()
 				p.IsInRoom = false
-				p.Conn.WriteJSON(singleStringReturnMessage{Message: err.Error()})
+				p.Conn.WriteJSON(genericMessage{Action: ActionMessageLeaveRoomResponse, Message: usernameErrorMessage{Username: p.username, Error: err.Error()}})
 				log.Println(p.username, "Game server Unlock")
 				p.mutex.Unlock()
 				log.Println(p.username, "Leave room - End of player room cycle WITH ERROR", err.Error())
@@ -69,10 +69,9 @@ func (p *Player) PlayerRoomInputCycle() error {
 			} else {
 				log.Println(p.username, "Game server Lock ok leave room")
 				p.mutex.Lock()
-				p.Conn.WriteJSON(singleStringReturnMessage{Message: "OK"})
+				p.Conn.WriteJSON(genericMessage{Action: ActionMessageLeaveRoomResponse, Message: usernameErrorMessage{Username: p.username, Error: ""}})
 				p.IsInRoom = false
 				p.EndGameChannel <- true
-				close(p.EndGameChannel)
 				log.Println(p.username, "Game server Unlock ok leave room")
 				p.mutex.Unlock()
 				log.Println(p.username, "Leave room - End of player room cycle no error")
@@ -109,6 +108,7 @@ func (p *Player) PlayerRoomInputCycle() error {
 
 //PlayerRoomGameCycle is the cycle for a single player that gets the messages from the server and write the message to the user
 func (p *Player) PlayerRoomGameCycle() {
+	log.Println(p.username, "Player start of PlayerRoomGameCycle")
 	for {
 		select {
 		case <-p.EndGameChannel:
