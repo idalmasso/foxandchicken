@@ -64,7 +64,9 @@ export default createStore({
   actions: {
     login(context, username) {
       if (context.getters.connection == null) {
-        var conn = new WebSocket('ws://localhost:3000/api/ws');
+        var conn = new WebSocket(
+          'ws://' + window.location.hostname + ':' + location.port + '/api/ws'
+        );
         conn.onmessage = event =>
           inputEvents.onMessageLoginReturn(event, context, username);
         conn.onerror = function(event) {
@@ -73,7 +75,10 @@ export default createStore({
         };
         conn.onopen = event => {
           this.$showLog && console.log(event);
-          this.$showLog && console.log('Successfully connected to the echo websocket server...');
+          this.$showLog &&
+            console.log(
+              'Successfully connected to the echo websocket server...'
+            );
           conn.send(JSON.stringify({ username: username }));
         };
         conn.onclose = event => {
@@ -161,7 +166,9 @@ export default createStore({
         if (context.getters.buttonsPressed.right) {
           acceleration.x += 1;
         }
-        const modul = Math.sqrt(Math.pow(acceleration.x, 2) + Math.pow(acceleration.y, 2));
+        const modul = Math.sqrt(
+          Math.pow(acceleration.x, 2) + Math.pow(acceleration.y, 2)
+        );
         if (modul > 1) {
           acceleration.x /= modul;
           acceleration.y /= modul;
@@ -231,7 +238,12 @@ export default createStore({
       return { x: state.accelX, y: state.accelY };
     },
     buttonsPressed(state) {
-      return { up: state.upPressed, down: state.downPressed, right: state.rightPressed, left: state.leftPressed };
+      return {
+        up: state.upPressed,
+        down: state.downPressed,
+        right: state.rightPressed,
+        left: state.leftPressed
+      };
     }
   },
   modules: {}
