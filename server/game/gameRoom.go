@@ -41,7 +41,7 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 	g.RoomInputChannel = make(chan messaging.RoomMessageValue)
 	g.Name = name
 	g.sizeX, g.sizeY = 100, 100
-	g.MaxAcceleration = 1
+	g.MaxAcceleration = 8
 	g.MaxVelocity = 2
 	g.Drag = 0.95
 	g.RoomOutputChannels = make(map[string]chan messaging.RoomMessageValue)
@@ -177,8 +177,7 @@ func (g *GameRoom) playerInput(m *messaging.CommRoomMessageMovePlayer) {
 	}
 
 	magnitude := m.Acceleration.SqrtMagnitude()
-
-	if magnitude > g.MaxAcceleration {
+	if magnitude != 0 {
 		m.Acceleration = m.Acceleration.ScalarProduct(g.MaxAcceleration / magnitude)
 	}
 	g.Players[m.Player].Rotation = m.Rotation

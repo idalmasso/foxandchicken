@@ -5,7 +5,6 @@ export default {
     const message = JSON.parse(event.data);
     if (message.message === 'OK') {
       context.commit('LOGIN', username);
-      context.dispatch('getRooms');
       router.push({ name: 'Rooms' });
     } else {
       context.commit('LOGINERROR', message.message);

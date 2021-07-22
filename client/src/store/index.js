@@ -94,7 +94,7 @@ export default createStore({
         context.getters.connection.send(JSON.stringify({ username: username }));
       }
     },
-    async getRooms(context) {
+    async retrieveListRooms(context) {
       if (context.getters.connection != null) {
         context.getters.connection.onmessage = event =>
           inputEvents.onMessageGetRoomsEvent(event, context);

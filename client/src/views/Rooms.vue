@@ -33,6 +33,9 @@ export default {
     createRoomRequest(text) {
       this.addRoom(text);
     }
+  },
+  mounted() {
+    this.$store.dispatch('retrieveListRooms');
   }
 
 };
