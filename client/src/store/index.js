@@ -65,8 +65,11 @@ export default createStore({
     login(context, username) {
       if (context.getters.connection == null) {
         console.log(this);
+        var port = process.env.NODE_ENV === 'development'
+          ? 3000
+          : location.port;
         var conn = new WebSocket(
-          'ws://' + window.location.hostname + ':' + this.$serverPort + '/api/ws'
+          'ws://' + window.location.hostname + ':' + port + '/api/ws'
         );
         conn.onmessage = event =>
           inputEvents.onMessageLoginReturn(event, context, username);
