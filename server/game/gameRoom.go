@@ -40,7 +40,7 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 	g.Players = make(map[string]*PlayerGameData)
 	g.RoomInputChannel = make(chan messaging.RoomMessageValue)
 	g.Name = name
-	g.sizeX, g.sizeY = 100, 100
+	g.sizeX, g.sizeY = 20, 20
 	g.MaxAcceleration = 8
 	g.MaxVelocity = 2
 	g.Drag = 0.95

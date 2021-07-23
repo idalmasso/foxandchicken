@@ -20,7 +20,11 @@ export default {
       renderer: null,
       meshes: null,
       now: undefined,
-      createdBox: false
+      createdBox: false,
+      cameraStart: 0,
+      lerpDuration: 0,
+      isLerping: false,
+      vectorEnd: null
     };
   },
   computed: {
@@ -39,9 +43,16 @@ export default {
       while (container.hasChildNodes()) {
         container.removeChild(container.lastChild);
       }
-      this.camera = new Three.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.01, 10);
+      this.cameraStart = 0;
+      this.lerpDuration = 25;
+      this.isLerping = false;
+      this.vectorEnd = new Three.Vector3();
+      this.camera = new Three.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.01, 12);
+      // this.camera.position.x = 50;
+      // this.camera.position.y = 50;
       this.camera.position.z = 10;
       this.scene = new Three.Scene();
+      this.addBackground(20, 20);
       this.meshes = [];
       for (const username in this.positions) {
         const position = this.positions[username].position;
@@ -66,6 +77,24 @@ export default {
           this.meshes[username].position.y = position.y;
           this.meshes[username].rotation.x += 0.01;
           this.meshes[username].rotation.y += 0.02;
+        }
+        if (username === this.username) {
+          if (!this.isLerping && (this.camera.position.x !== position.x || this.camera.position.y !== position.y)) {
+            this.cameraStart = timeStamp;
+            this.cameraEnd = this.cameraStart + 20;
+            this.vectorEnd.x = position.x;
+            this.vectorEnd.y = position.y;
+            this.vectorEnd.z = this.camera.position.z;
+            this.isLerping = true;
+          }
+          if (this.cameraStart !== 0) {
+            this.camera.position.lerp(this.vectorEnd, (timeStamp - this.cameraStart) / this.lerpDuration);
+            this.meshes[username].position.x = this.camera.position.x;
+            this.meshes[username].position.y = this.camera.position.y;
+            if (timeStamp > this.cameraStart + this.lerpDuration) {
+              this.isLerping = false;
+            }
+          }
         }
       }
       for (const username in this.meshes) {
@@ -98,7 +127,7 @@ export default {
       this.meshes[username].add(sprite);
     },
     addBox(x, y, z, posX, posY, posZ) {
-      this.$showLog && console.log('adding a box ');
+      this.$showLog && console.log('adding a box');
       const geometry = new Three.BoxGeometry(x, y, z);
       const material = new Three.MeshNormalMaterial();
       const mesh = new Three.Mesh(geometry, material);
@@ -118,6 +147,16 @@ export default {
       mesh.position.z = posZ;
       this.scene.add(mesh);
       return mesh;
+    },
+    addBackground(sizeX, sizeY) {
+      this.$showLog && console.log('adding background');
+      const geometry = new Three.BoxGeometry(sizeX, sizeY, 0.1);
+      const material = new Three.MeshBasicMaterial({ color: 0x344522, wireframe: false });
+      const mesh = new Three.Mesh(geometry, material);
+      mesh.position.x = sizeX / 2;
+      mesh.position.y = sizeY / 2;
+      mesh.position.z = -1;
+      this.scene.add(mesh);
     },
     keyboardHandler(event, pressed) {
       const arrows = code => {
