@@ -64,7 +64,6 @@ export default createStore({
   actions: {
     login(context, username) {
       if (context.getters.connection == null) {
-        console.log(this);
         var port = process.env.NODE_ENV === 'development'
           ? 3000
           : location.port;
@@ -88,7 +87,7 @@ export default createStore({
         conn.onclose = event => {
           this.$showLog && console.log(event);
           this.$showLog && console.log('Connection closed');
-          this.$showLog && context.commit('LOGOUT');
+          context.commit('LOGOUT');
           router.push({ name: 'Home' });
         };
         context.commit('ADDCONNECTION', conn);

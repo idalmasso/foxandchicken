@@ -2,11 +2,9 @@ package game
 
 import (
 	"log"
-	"math"
 	"sync"
 	"time"
 
-	"github.com/idalmasso/foxandchicken/server/game/common"
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
 
@@ -106,85 +104,42 @@ func (g *GameRoom) gameCycle() {
 		g.mutex.Unlock()
 		time.Sleep(time.Millisecond * 50)
 	}()
+	log.Println("gameCycle - BEFORE MAKE")
 	message := make(messaging.CommRoomMessagePlayersMovement, len(g.Players))
 	i := 0
-
+	deltaT := time.Duration(newTimestamp - g.timestamp).Seconds()
+	//Will be range of gameobjects
 	for username, p := range g.Players {
-
+		log.Println("gameCycle - BEFORE LOCK")
 		p.mutex.Lock()
-
-		g.movePlayer(p, time.Duration(newTimestamp-p.timestamp))
-		p.timestamp = newTimestamp
+		log.Println("gameCycle - AFTER Lock")
+		p.gameObject.Update(deltaT)
+		log.Println("gameCycle - AFTER Update")
 		var m messaging.CommRoomMessageMovePlayer
-		m.Position = p.Position
-		m.Rotation = p.Rotation
-		m.Velocity = p.Velocity
-		m.Acceleration = p.Acceleration
+		m.Position = p.gameObject.Position
+
 		p.mutex.Unlock()
+		log.Println("gameCycle - AFTER uNLock")
 		m.Player = username
 		m.Timestamp = newTimestamp
 		message[i] = m
 		i++
 	}
 	log.Println("Game cycle broadcasting move")
+	log.Println("gameCycle - before broadcastMessage")
 	g.broadcastMessage(&message)
+	log.Println("gameCycle - after broadcastMessage")
 	g.timestamp = newTimestamp
 
-}
-
-func (g *GameRoom) movePlayer(p *PlayerGameData, deltaT time.Duration) {
-	ts := deltaT.Seconds()
-	p.Position = common.VectorSum(p.Position, p.Velocity.ScalarProduct(ts))
-	p.Position = p.Position.ClampVector(0, g.sizeX, 0, g.sizeY)
-	if p.Acceleration.X == 0 && p.Acceleration.Y == 0 {
-
-		magnitude := p.Velocity.SqrtMagnitude()
-		if magnitude < 0.15 {
-			p.Velocity.X = 0
-			p.Velocity.Y = 0
-			return
-		}
-
-		p.Velocity = common.VectorSum(p.Velocity, p.Velocity.ScalarProduct(-g.Drag*ts))
-	} else {
-		p.Velocity = common.VectorSum(p.Velocity, p.Acceleration.ScalarProduct(ts))
-		magnitude := p.Velocity.SqrtMagnitude()
-
-		if magnitude > g.MaxVelocity {
-			p.Velocity = p.Velocity.ScalarProduct(g.MaxVelocity / magnitude)
-		}
-	}
-	if math.Abs(p.Acceleration.X) == 0 && math.Abs(p.Velocity.X) < 0.1 {
-		p.Velocity.X = 0
-	}
-	if math.Abs(p.Acceleration.Y) == 0 && math.Abs(p.Velocity.Y) < 0.1 {
-		p.Velocity.Y = 0
-	}
 }
 
 //Right by now it will be ALL on frontend... Next->checks
 func (g *GameRoom) playerInput(m *messaging.CommRoomMessageMovePlayer) {
-	log.Println(m.Player, "playerInput Lock")
-	g.Players[m.Player].mutex.Lock()
-	defer func() {
-		log.Println(m.Player, "playerInput UnLock")
-		g.Players[m.Player].mutex.Unlock()
-
-	}()
-	newTimestamp := time.Now().UnixNano()
-	if m.Timestamp > newTimestamp || m.Timestamp == 0 {
-		m.Timestamp = newTimestamp
-	}
-
 	magnitude := m.Acceleration.SqrtMagnitude()
 	if magnitude != 0 {
 		m.Acceleration = m.Acceleration.ScalarProduct(g.MaxAcceleration / magnitude)
 	}
-	g.Players[m.Player].Rotation = m.Rotation
-	g.Players[m.Player].Acceleration = m.Acceleration
-	g.movePlayer(g.Players[m.Player], time.Duration(newTimestamp-m.Timestamp))
-	g.timestamp = newTimestamp
-
+	g.Players[m.Player].SetInput(m.Acceleration)
 }
 
 //RemovePlayer removes a player from the room
@@ -205,7 +160,7 @@ func (g *GameRoom) RemovePlayer(username string) {
 
 //AddPlayer add a player in the room
 func (g *GameRoom) AddPlayer(username string) {
-	player := PlayerGameData{Username: username, timestamp: time.Now().UnixNano()}
-	g.Players[username] = &player
+	g.Players[username] = NewPlayer(username, 1, g)
 	g.RoomOutputChannels[username] = make(chan messaging.RoomMessageValue)
+
 }

@@ -35,3 +35,7 @@ func (v Vector2) ClampVector(minX, maxX, minY, maxY float64) Vector2 {
 
 	return v2
 }
+
+func NullVector() Vector2 {
+	return Vector2{X: 0, Y: 0}
+}
