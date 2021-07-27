@@ -28,6 +28,7 @@ type GameRoom struct {
 	MaxVelocity        float64
 	Drag               float64
 	timestamp          int64
+	roomStopChannel    chan bool
 }
 
 //createRoom creates the actual room in a gameinstance
@@ -43,6 +44,7 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 	g.MaxVelocity = 2
 	g.Drag = 0.95
 	g.RoomOutputChannels = make(map[string]chan messaging.RoomMessageValue)
+	g.roomStopChannel = make(chan bool)
 	return &g
 }
 
@@ -53,13 +55,12 @@ func (g *GameRoom) Run() {
 	g.timestamp = time.Now().UnixNano()
 	log.Println("Run - UnLock")
 	g.mutex.Unlock()
+	go g.gameCycle()
 	for {
-		if len(g.Players) == 0 {
-			log.Println("Room", g.Name, "empty, removing")
-			g.Instance.removeRoom(g.Name)
-			return
-		}
 		select {
+		case <-g.roomStopChannel:
+			log.Println("Room", g.Name, "Game cycle stop")
+			return
 		case val := <-g.RoomInputChannel:
 			log.Println("Read room input channel")
 			if val != nil {
@@ -72,10 +73,7 @@ func (g *GameRoom) Run() {
 			} else {
 				log.Println("Got a null room message")
 			}
-		default:
-			log.Println("Game cycle")
-			g.gameCycle()
-			log.Println("End Game cycle")
+
 		}
 
 	}
@@ -94,43 +92,43 @@ func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 	log.Printf("room %s broadcasted %T", g.Name, message.GetMessageType())
 }
 
-//Right by now it will be ALL on frontend... Next->checks
+//gameCycle is the output cycle, and also the recalculate. Probably should do in 2 different goroutines, to be more clean (1 for the "game", one for the "output")
 func (g *GameRoom) gameCycle() {
+	for {
+		select {
+		case <-g.roomStopChannel:
+			log.Println("Room", g.Name, "Game cycle stop")
+			return
+		default:
+			g.updateAndSendData()
+		}
+	}
+}
+func (g *GameRoom) updateAndSendData() {
 	newTimestamp := time.Now().UnixNano()
-	log.Println("gameCycle - Lock")
 	g.mutex.Lock()
 	defer func() {
-		log.Println("gameCycle - Unlock")
 		g.mutex.Unlock()
 		time.Sleep(time.Millisecond * 50)
 	}()
-	log.Println("gameCycle - BEFORE MAKE")
 	message := make(messaging.CommRoomMessagePlayersMovement, len(g.Players))
 	i := 0
 	deltaT := time.Duration(newTimestamp - g.timestamp).Seconds()
 	//Will be range of gameobjects
 	for username, p := range g.Players {
-		log.Println("gameCycle - BEFORE LOCK")
 		p.mutex.Lock()
-		log.Println("gameCycle - AFTER Lock")
 		p.gameObject.Update(deltaT)
-		log.Println("gameCycle - AFTER Update")
 		var m messaging.CommRoomMessageMovePlayer
 		m.Position = p.gameObject.Position
 
 		p.mutex.Unlock()
-		log.Println("gameCycle - AFTER uNLock")
 		m.Player = username
 		m.Timestamp = newTimestamp
 		message[i] = m
 		i++
 	}
-	log.Println("Game cycle broadcasting move")
-	log.Println("gameCycle - before broadcastMessage")
 	g.broadcastMessage(&message)
-	log.Println("gameCycle - after broadcastMessage")
 	g.timestamp = newTimestamp
-
 }
 
 //Right by now it will be ALL on frontend... Next->checks
@@ -156,6 +154,11 @@ func (g *GameRoom) RemovePlayer(username string) {
 	delete(g.RoomOutputChannels, username)
 
 	g.broadcastMessage(&messaging.CommRoomMessageLeftPlayer{Player: username})
+	if len(g.Players) <= 0 {
+		g.roomStopChannel <- true //One for the input goroutine
+		g.roomStopChannel <- true //One for the output goroutine
+		close(g.roomStopChannel)
+	}
 }
 
 //AddPlayer add a player in the room

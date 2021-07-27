@@ -204,12 +204,12 @@ func (g *GameInstance) broadCastMessageAllPlayers(message messaging.InstanceMess
 func (g *GameInstance) GetRooms() []GameRoomNumPlayer {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	rooms := make([]GameRoomNumPlayer, len(g.Rooms))
-	counter := 0
+	rooms := make([]GameRoomNumPlayer, 0)
 	for name, room := range g.Rooms {
-		gameRoom := GameRoomNumPlayer{Name: name, Players: len(room.Players)}
-		rooms[counter] = gameRoom
-		counter++
+		if len(room.Players) > 0 {
+			gameRoom := GameRoomNumPlayer{Name: name, Players: len(room.Players)}
+			rooms = append(rooms, gameRoom)
+		}
 	}
 
 	return rooms
