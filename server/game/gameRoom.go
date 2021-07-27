@@ -105,12 +105,16 @@ func (g *GameRoom) gameCycle() {
 	}
 }
 func (g *GameRoom) updateAndSendData() {
-	newTimestamp := time.Now().UnixNano()
+
 	g.mutex.Lock()
 	defer func() {
 		g.mutex.Unlock()
 		time.Sleep(time.Millisecond * 50)
 	}()
+	if len(g.Players) <= 0 {
+		return
+	}
+	newTimestamp := time.Now().UnixNano()
 	message := make(messaging.CommRoomMessagePlayersMovement, len(g.Players))
 	i := 0
 	deltaT := time.Duration(newTimestamp - g.timestamp).Seconds()
