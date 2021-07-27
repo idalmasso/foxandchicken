@@ -24,7 +24,8 @@ export default {
       cameraStart: 0,
       lerpDuration: 0,
       isLerping: false,
-      vectorEnd: null
+      vectorEnd: null,
+      animating: false
     };
   },
   computed: {
@@ -40,12 +41,10 @@ export default {
     }),
     init() {
       const container = document.getElementById('container');
-      while (container.hasChildNodes()) {
-        container.removeChild(container.lastChild);
-      }
       this.cameraStart = 0;
       this.lerpDuration = 25;
       this.isLerping = false;
+      this.animating = true;
       this.vectorEnd = new Three.Vector3();
       this.camera = new Three.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.01, 12);
       // this.camera.position.x = 50;
@@ -66,6 +65,9 @@ export default {
       if (this.start === undefined) {
         this.start = timeStamp;
       }
+      if (!this.animating) {
+        return;
+      }
       // const elapsed = timeStamp - this.start;
       requestAnimationFrame(this.animate);
       for (const username in this.positions) {
@@ -81,7 +83,6 @@ export default {
         if (username === this.username) {
           if (!this.isLerping && (this.camera.position.x !== position.x || this.camera.position.y !== position.y)) {
             this.cameraStart = timeStamp;
-            this.cameraEnd = this.cameraStart + 20;
             this.vectorEnd.x = position.x;
             this.vectorEnd.y = position.y;
             this.vectorEnd.z = this.camera.position.z;
@@ -199,11 +200,12 @@ export default {
     document.addEventListener('keydown', this.keyDown);
     document.addEventListener('keyup', this.keyUp);
     this.init();
-    this.animate();
+    requestAnimationFrame(this.animate);
   },
   unmounted() {
     document.removeEventListener('keydown', this.keyDown);
     document.removeEventListener('keyup', this.keyUp);
+    this.animating = false;
   }
 };
 </script>

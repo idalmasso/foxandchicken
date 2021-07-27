@@ -59,7 +59,7 @@ func (g *GameRoom) Run() {
 	for {
 		select {
 		case <-g.roomStopChannel:
-			log.Println("Room", g.Name, "Game cycle stop")
+			log.Println("Room", g.Name, "Game run stop")
 			return
 		case val := <-g.RoomInputChannel:
 			log.Println("Read room input channel")
@@ -159,6 +159,7 @@ func (g *GameRoom) RemovePlayer(username string) {
 
 	g.broadcastMessage(&messaging.CommRoomMessageLeftPlayer{Player: username})
 	if len(g.Players) <= 0 {
+		g.Instance.removeRoom(g.Name)
 		g.roomStopChannel <- true //One for the input goroutine
 		g.roomStopChannel <- true //One for the output goroutine
 		close(g.roomStopChannel)
