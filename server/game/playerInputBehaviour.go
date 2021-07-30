@@ -1,4 +1,4 @@
-package gameobjects
+package game
 
 import "github.com/idalmasso/foxandchicken/server/game/common"
 

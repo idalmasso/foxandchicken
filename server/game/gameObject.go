@@ -1,4 +1,4 @@
-package gameobjects
+package game
 
 import (
 	"sync"
@@ -11,6 +11,7 @@ type GameObject struct {
 	Position   common.Vector2
 	rotation   float64
 	behaviours map[GameBehaviourEnum]gameBehaviour
+	room       *GameRoom
 	mutex      sync.RWMutex
 }
 

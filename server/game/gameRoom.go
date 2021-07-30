@@ -29,6 +29,7 @@ type GameRoom struct {
 	Drag               float64
 	timestamp          int64
 	roomStopChannel    chan bool
+	playerByPositions  map[int][]string
 }
 
 //createRoom creates the actual room in a gameinstance
@@ -168,7 +169,95 @@ func (g *GameRoom) RemovePlayer(username string) {
 
 //AddPlayer add a player in the room
 func (g *GameRoom) AddPlayer(username string) {
-	g.Players[username] = NewPlayer(username, 1, g)
+	g.Players[username] = NewPlayer(username, CharacterTypeFox, g)
 	g.RoomOutputChannels[username] = make(chan messaging.RoomMessageValue)
 
+}
+
+//Get the cellnum in 1-based grid
+func (g *GameRoom) getCellNum(x, y float64) int {
+	if x < 0 || x > g.sizeX || y < 0 || y > g.sizeY {
+		return -1
+	}
+
+	intX, intY := int(x), int(y)
+	if intX == int(g.sizeX) {
+		intX--
+	}
+	if intY == int(g.sizeY) {
+		intY--
+	}
+	return intX + intY*int(g.sizeX)
+}
+
+//get the 8 behaviours cells
+func (g *GameRoom) getCellNeightbours(cellNum int) []int {
+	if cellNum < 0 || cellNum >= int(g.sizeX*g.sizeY) {
+		return make([]int, 0)
+	}
+	size := 0
+	bottom, top, left, right := true, true, true, true
+
+	//First bottom line
+	if cellNum < int(g.sizeX) {
+		bottom = false
+	}
+	//Last top line
+	if cellNum > (int(g.sizeX)-1)*int(g.sizeY) {
+		top = false
+	}
+	//first column
+	if cellNum%int(g.sizeX) == 0 {
+		left = false
+	}
+	//last column
+	if (cellNum+1)%int(g.sizeX) == 0 {
+		right = false
+	}
+	size = 8
+	if !top || !bottom {
+		size -= 3
+		if !left || !right {
+			size -= 2
+		}
+	} else {
+		if !left || !right {
+			size -= 3
+		}
+	}
+	neightbours := make([]int, size)
+	index := 0
+	if top {
+		if left {
+			neightbours[index] = cellNum + int(g.sizeX) - 1
+			index++
+		}
+		neightbours[index] = cellNum + int(g.sizeX)
+		index++
+		if right {
+			neightbours[index] = cellNum + int(g.sizeX) + 1
+			index++
+		}
+	}
+	if left {
+		neightbours[index] = cellNum - 1
+		index++
+	}
+	if right {
+		neightbours[index] = cellNum + 1
+		index++
+	}
+	if bottom {
+		if left {
+			neightbours[index] = cellNum - int(g.sizeX) - 1
+			index++
+		}
+		neightbours[index] = cellNum - int(g.sizeX)
+		index++
+		if right {
+			neightbours[index] = cellNum - int(g.sizeX) + 1
+			index++
+		}
+	}
+	return neightbours
 }

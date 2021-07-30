@@ -1,4 +1,4 @@
-package gameobjects
+package game
 
 import (
 	"math"
@@ -11,7 +11,6 @@ type MovingObject struct {
 	Acceleration common.Vector2
 	MaxVelocity  float64
 	Drag         float64
-	GameSize     common.Vector2
 	gameObject   *GameObject
 }
 
@@ -23,7 +22,7 @@ func (o *MovingObject) init(g *GameObject) {
 
 func (o *MovingObject) update(ts float64) {
 	o.gameObject.Position = common.VectorSum(o.gameObject.Position, o.Velocity.ScalarProduct(ts))
-	o.gameObject.Position = o.gameObject.Position.ClampVector(0, o.GameSize.X, 0, o.GameSize.Y)
+	o.gameObject.Position = o.gameObject.Position.ClampVector(0, o.gameObject.room.sizeX, 0, o.gameObject.room.sizeY)
 	if o.Acceleration.X == 0 && o.Acceleration.Y == 0 {
 
 		magnitude := o.Velocity.SqrtMagnitude()
