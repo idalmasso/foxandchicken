@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/idalmasso/foxandchicken/server/game/common"
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
@@ -33,21 +33,36 @@ func (p *Player) PlayerRoomInputCycle() error {
 		if err := p.Conn.ReadJSON(&mex); err != nil {
 			var jErr *json.SyntaxError
 			if errors.As(err, &jErr) {
-				log.Println("ERROR "+p.username, "cannot decode the message", err.Error())
-				log.Println(p.username, "Game server Lock no decode")
+				if glog.V(1) {
+					glog.Warningln("Player.PlayerRoomInputCycle - ERROR "+p.username, "cannot decode the message", err.Error())
+				}
+				if glog.V(3) {
+					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex lock no decode", p.username)
+				}
+				
 				p.mutex.Lock()
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
-				log.Println(p.username, "Game server unlock no decode")
+				if glog.V(3) {
+					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex unlock no decode", p.username)
+				}
 				p.mutex.Unlock()
 			} else {
-				log.Println(p.username, "Timeout")
-				log.Println(p.username, "Game server Lock timeout")
+				if glog.V(1) {
+					glog.Infoln("Player.PlayerRoomInputCycle - User", p.username, "Timeout")
+				}
+				if glog.V(3) {
+					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex lock timeout", p.username)
+				}
 				p.mutex.Lock()
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
-				log.Println(p.username, "Game server unlock timeout")
+				if glog.V(3) {
+					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex unlock timeout", p.username)
+				}
 				p.mutex.Unlock()
 
-				log.Println(p.username, "End of player room cycle")
+				if glog.V(2) {
+					glog.Infoln("Player.PlayerRoomInputCycle - end", p.username)
+				}
 				return err
 			}
 		}
@@ -58,23 +73,35 @@ func (p *Player) PlayerRoomInputCycle() error {
 		switch mex.GetAction() {
 		case ActionMessageLeaveRoom:
 			if err := p.tryLeaveRoom(); err != nil {
-				log.Println(p.username, "Game server Lock")
+				if glog.V(3) {
+					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex lock ActionMessageLeaveRoom with error", p.username)
+				}
 				p.mutex.Lock()
 				p.IsInRoom = false
 				p.Conn.WriteJSON(genericMessage{Action: ActionMessageLeaveRoomResponse, Message: usernameErrorMessage{Username: p.username, Error: err.Error()}})
-				log.Println(p.username, "Game server Unlock")
+				if glog.V(3) {
+					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex unlock ActionMessageLeaveRoom with error", p.username)
+				}
 				p.mutex.Unlock()
-				log.Println(p.username, "Leave room - End of player room cycle WITH ERROR", err.Error())
+				if glog.V(1) {
+					glog.Warningln("Player.PlayerRoomInputCycle - Leave room WITH error", p.username, err.Error())
+				}
 				return err
 			} else {
-				log.Println(p.username, "Game server Lock ok leave room")
+				if glog.V(3) {
+					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex lock ActionMessageLeaveRoom no error", p.username)
+				}
 				p.mutex.Lock()
 				p.Conn.WriteJSON(genericMessage{Action: ActionMessageLeaveRoomResponse, Message: usernameErrorMessage{Username: p.username, Error: ""}})
 				p.IsInRoom = false
 				p.EndGameChannel <- true
-				log.Println(p.username, "Game server Unlock ok leave room")
+				if glog.V(3) {
+					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex unlock ActionMessageLeaveRoom no error", p.username)
+				}
 				p.mutex.Unlock()
-				log.Println(p.username, "Leave room - End of player room cycle no error")
+				if glog.V(2) {
+					glog.Infoln("Player.PlayerRoomInputCycle - Leave room no error", p.username)
+				}
 				return nil
 			}
 		case ActionMessageMovement:
@@ -92,14 +119,20 @@ func (p *Player) PlayerRoomInputCycle() error {
 				velocity := common.Vector2{X: m.VelocityX, Y: m.VelocityY}
 				acceleration := common.Vector2{X: m.AccelerationX, Y: m.AccelerationY}
 				sMex := messaging.CommRoomMessageMovePlayer{Player: p.username, Position: position, Velocity: velocity, Rotation: m.Rotation, Acceleration: acceleration}
-				log.Println(p.username, "Send message movement")
+				if glog.V(3) {
+					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - ActionMessageMovement", p.username, sMex)
+				}
 				p.RoomChannel <- &sMex
 			}
 		default:
-			log.Println(p.username, "Game server Lock no rec")
+			if glog.V(3) {
+				glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - lock no recognited", p.username)
+			}
 			p.mutex.Lock()
 			p.Conn.WriteJSON(singleStringReturnMessage{Message: "action not recognized"})
-			log.Println(p.username, "Game server Unlock no rec")
+			if glog.V(3) {
+				glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - unlock no recognited", p.username)
+			}
 			p.mutex.Unlock()
 		}
 
@@ -108,14 +141,20 @@ func (p *Player) PlayerRoomInputCycle() error {
 
 //PlayerRoomGameCycle is the cycle for a single player that gets the messages from the server and write the message to the user
 func (p *Player) PlayerRoomGameCycle() {
-	log.Println(p.username, "Player start of PlayerRoomGameCycle")
+	if glog.V(2) {
+		glog.Infoln("Player.PlayerRoomGameCycle - start", p.username)
+	}
 	for {
 		select {
 		case <-p.EndGameChannel:
-			log.Println(p.username, "Player end of PlayerRoomGameCycle")
+			if glog.V(2) {
+				glog.Infoln("Player.PlayerRoomGameCycle - end", p.username)
+			}
 			return
 		case v := <-p.RoomChannelOutput:
-			log.Println(p.username, "Game server Lock")
+			if glog.V(3) {
+				glog.Infoln("DEBUG - Player.PlayerRoomGameCycle - RoomChannelOutput lock", p.username)
+			}
 			p.mutex.Lock()
 			if !p.IsClosing {
 				switch v.GetMessageType() {
@@ -125,7 +164,9 @@ func (p *Player) PlayerRoomGameCycle() {
 					if data, err := json.Marshal(moves); err == nil {
 						p.Conn.WriteJSON(message{Action: ActionMessageMovesRoom, Message: string(data)})
 					} else {
-						log.Println("Error: ", err.Error())
+						if glog.V(1) {
+							glog.Warningln("Player.PlayerRoomGameCycle - RoomChannelOutput error json", err.Error())
+						}
 					}
 
 				case messaging.RoomMessageTypeLeftPlayer:
@@ -134,7 +175,9 @@ func (p *Player) PlayerRoomGameCycle() {
 					p.Conn.WriteJSON(message{Action: ActionMessageLeaveRoom, Message: mex.Player})
 				}
 			}
-			log.Println(p.username, "Game server UnLock")
+			if glog.V(3) {
+				glog.Infoln("DEBUG - Player.PlayerRoomGameCycle - RoomChannelOutput unlock", p.username)
+			}
 			p.mutex.Unlock()
 
 		}

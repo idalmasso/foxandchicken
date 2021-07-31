@@ -1,10 +1,10 @@
 package game
 
 import (
-	"log"
 	"sync"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
 
@@ -29,12 +29,15 @@ type GameRoom struct {
 	Drag               float64
 	timestamp          int64
 	roomStopChannel    chan bool
-	playerByPositions  map[int][]string
+	cellsToGameObjectmap  map[int]map[*GameObject]struct{}
+	
 }
 
 //createRoom creates the actual room in a gameinstance
 func createRoom(name string, instance *GameInstance) *GameRoom {
-	log.Println("Creating room", name)
+	if glog.V(2) {
+		glog.Infoln("creating room", name)
+	}
 	g := GameRoom{Instance: instance}
 	g.status = 0
 	g.Players = make(map[string]*PlayerGameData)
@@ -45,25 +48,37 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 	g.MaxVelocity = 2
 	g.Drag = 0.95
 	g.RoomOutputChannels = make(map[string]chan messaging.RoomMessageValue)
+	g.cellsToGameObjectmap = make(map[int]map[*GameObject]struct{})
+	for x:=0; x<int(g.sizeX*g.sizeY); x++{
+		g.cellsToGameObjectmap[x]= make(map[*GameObject]struct{})
+	}
 	g.roomStopChannel = make(chan bool)
 	return &g
 }
 
 //Run is the GameRoom main call
 func (g *GameRoom) Run() {
-	log.Println("Run - Lock")
+	if glog.V(3) {
+		glog.Infoln("DEBUG - GameRoom.Run - Lock")
+	}
 	g.mutex.Lock()
 	g.timestamp = time.Now().UnixNano()
-	log.Println("Run - UnLock")
+	if glog.V(3) {
+		glog.Infoln("DEBUG - GameRoom.Run - UnLock")
+	}
 	g.mutex.Unlock()
 	go g.gameCycle()
 	for {
 		select {
 		case <-g.roomStopChannel:
-			log.Println("Room", g.Name, "Game run stop")
+			if glog.V(2) {
+				glog.Infoln("GameRoom.Run - Room", g.Name, "Game run stop")
+			}
 			return
 		case val := <-g.RoomInputChannel:
-			log.Println("Read room input channel")
+			if glog.V(2) {
+				glog.Infoln("GameRoom.Run - Read room input channel")
+			}
 			if val != nil {
 				switch val.GetMessageType() {
 				case messaging.RoomMessageTypeMovePlayer:
@@ -72,7 +87,9 @@ func (g *GameRoom) Run() {
 
 				}
 			} else {
-				log.Println("Got a null room message")
+				if glog.V(1) {
+					glog.Warningln("GameRoom.Run - Got a null room message")
+				}
 			}
 
 		}
@@ -82,7 +99,9 @@ func (g *GameRoom) Run() {
 
 //broadcastMessage send a message to all players in room
 func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
-	log.Printf("room %s broadcast %T", g.Name, message.GetMessageType())
+	if glog.V(3) {
+		glog.Infoln("DEBUG - GameRoom.broadcastMessage - room", g.Name, "broadcast", message.GetMessageType())
+	}
 
 	for p := range g.Players {
 		//log.Println("---Send message to", p)
@@ -90,7 +109,9 @@ func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 			g.RoomOutputChannels[p] <- message
 		}
 	}
-	log.Printf("room %s broadcasted %T", g.Name, message.GetMessageType())
+	if glog.V(3) {
+		glog.Infoln("DEBUG - GameRoom.broadcastMessage - room", g.Name, "broadcasted", message.GetMessageType())
+	}
 }
 
 //gameCycle is the output cycle, and also the recalculate. Probably should do in 2 different goroutines, to be more clean (1 for the "game", one for the "output")
@@ -98,7 +119,9 @@ func (g *GameRoom) gameCycle() {
 	for {
 		select {
 		case <-g.roomStopChannel:
-			log.Println("Room", g.Name, "Game cycle stop")
+			if glog.V(2) {
+				glog.Infoln("GameRoom.gameCycle - Room", g.Name, "Game cycle stop")
+			}
 			return
 		default:
 			g.updateAndSendData()
@@ -147,11 +170,17 @@ func (g *GameRoom) playerInput(m *messaging.CommRoomMessageMovePlayer) {
 
 //RemovePlayer removes a player from the room
 func (g *GameRoom) RemovePlayer(username string) {
-	log.Println("Room removing player ", username)
-	log.Println("RemovePlayer - Lock")
+	if glog.V(2) {
+		glog.Infoln("GameRoom.RemovePlayer - removing player ", username)
+	}
+	if glog.V(3) {
+		glog.Infoln("DEBUG - GameRoom.RemovePlayer - Lock")
+	}
 	g.mutex.Lock()
 	defer func() {
-		log.Println("RemovePlayer - Unlock")
+		if glog.V(3) {
+		glog.Infoln("DEBUG - GameRoom.RemovePlayer - UnLock")
+	}
 		g.mutex.Unlock()
 	}()
 
@@ -171,93 +200,6 @@ func (g *GameRoom) RemovePlayer(username string) {
 func (g *GameRoom) AddPlayer(username string) {
 	g.Players[username] = NewPlayer(username, CharacterTypeFox, g)
 	g.RoomOutputChannels[username] = make(chan messaging.RoomMessageValue)
-
-}
-
-//Get the cellnum in 1-based grid
-func (g *GameRoom) getCellNum(x, y float64) int {
-	if x < 0 || x > g.sizeX || y < 0 || y > g.sizeY {
-		return -1
-	}
-
-	intX, intY := int(x), int(y)
-	if intX == int(g.sizeX) {
-		intX--
-	}
-	if intY == int(g.sizeY) {
-		intY--
-	}
-	return intX + intY*int(g.sizeX)
-}
-
-//get the 8 behaviours cells
-func (g *GameRoom) getCellNeightbours(cellNum int) []int {
-	if cellNum < 0 || cellNum >= int(g.sizeX*g.sizeY) {
-		return make([]int, 0)
-	}
-	size := 0
-	bottom, top, left, right := true, true, true, true
-
-	//First bottom line
-	if cellNum < int(g.sizeX) {
-		bottom = false
-	}
-	//Last top line
-	if cellNum > (int(g.sizeX)-1)*int(g.sizeY) {
-		top = false
-	}
-	//first column
-	if cellNum%int(g.sizeX) == 0 {
-		left = false
-	}
-	//last column
-	if (cellNum+1)%int(g.sizeX) == 0 {
-		right = false
-	}
-	size = 8
-	if !top || !bottom {
-		size -= 3
-		if !left || !right {
-			size -= 2
-		}
-	} else {
-		if !left || !right {
-			size -= 3
-		}
-	}
-	neightbours := make([]int, size)
-	index := 0
-	if top {
-		if left {
-			neightbours[index] = cellNum + int(g.sizeX) - 1
-			index++
-		}
-		neightbours[index] = cellNum + int(g.sizeX)
-		index++
-		if right {
-			neightbours[index] = cellNum + int(g.sizeX) + 1
-			index++
-		}
-	}
-	if left {
-		neightbours[index] = cellNum - 1
-		index++
-	}
-	if right {
-		neightbours[index] = cellNum + 1
-		index++
-	}
-	if bottom {
-		if left {
-			neightbours[index] = cellNum - int(g.sizeX) - 1
-			index++
-		}
-		neightbours[index] = cellNum - int(g.sizeX)
-		index++
-		if right {
-			neightbours[index] = cellNum - int(g.sizeX) + 1
-			index++
-		}
-	}
-	return neightbours
+	
+	g.addGameObject(g.Players[username].gameObject)
 }

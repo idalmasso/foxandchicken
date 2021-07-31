@@ -2,10 +2,10 @@ package game
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
 )
 
@@ -75,18 +75,24 @@ func NewInstance() *GameInstance {
 
 //GameInstanceRun is the main instance (creates and remove rooms and other)
 func (g *GameInstance) GameInstanceRun() {
-	log.Println("Game instance starting")
+	if glog.V(2) {
+		glog.Infoln("Game instance starting")
+	}
 	for {
 		if len(g.Players) != 0 {
 			select {
 			case val := <-g.InputChannel:
 				switch val.GetMessageType() {
 				case messaging.MessageResponse:
-					log.Println("should not be here")
+					if glog.V(1) {
+						glog.Warningln("should not be here")
+					}
 				case messaging.MessageTypeCreateRoom:
 					message := val.(*messaging.CommMessageCreateRoom)
 					if p, ok := g.PlayerDataChannels[message.Player]; ok {
-						log.Println("creating room", message.Name)
+						if glog.V(2) {
+							glog.Infoln("creating room", message.Name)
+						}
 						var okMessage messaging.CommMessageResponseCreateRoom
 						okMessage.Message = ""
 						if _, ok = g.PlayersWaiting[message.Player]; !ok {
@@ -108,13 +114,17 @@ func (g *GameInstance) GameInstanceRun() {
 					message := val.(*messaging.CommRoomMessageJoinPlayer)
 					var r messaging.CommMessageResponseJoinRoom
 					if room, ok := g.Rooms[message.Name]; !ok {
-						log.Println("Player", message.Player, "try to join not existing room", message.Name)
+						if glog.V(2) {
+							glog.Infoln("Player", message.Player, "try to join not existing room", message.Name)
+						}
 						r.Message = "room not exists"
 						g.mutex.Lock()
 						g.PlayerDataChannels[message.Player] <- &r
 						g.mutex.Unlock()
 					} else {
-						log.Println("Player", message.Player, "joined room", room.Name)
+						if glog.V(2) {
+							glog.Infoln("Player", message.Player, "joined room", room.Name)
+						}
 						room.mutex.Lock()
 						if roomOfPlayer, ok := g.Players[message.Player]; ok {
 							if roomOfPlayer == "" {
@@ -131,15 +141,20 @@ func (g *GameInstance) GameInstanceRun() {
 					}
 				case messaging.RoomMessageTypeLeftPlayer:
 					message := val.(*messaging.CommRoomMessageLeftPlayer)
-					log.Println("Player", message.Player, "left room", g.Players[message.Player])
+					if glog.V(2) {
+						glog.Infoln("RoomMessageTypeLeftPlayer - Player", message.Player, "left room", g.Players[message.Player])
+					}
 
 					if message.Player == "" {
-						log.Println("empty player message")
-
+						if glog.V(1) {
+							glog.Warningln("RoomMessageTypeLeftPlayer - empty player message")
+						}
 					} else {
 						response := messaging.CommMessageResponse{Message: ""}
 						if _, ok := g.Rooms[g.Players[message.Player]]; ok {
-							log.Println("ok sending message to player back")
+							if glog.V(2) {
+								glog.Infoln("RoomMessageTypeLeftPlayer - ok sending message to player back", message.Player)
+							}
 							g.setPlayerWaiting(message.Player)
 							g.Rooms[g.Players[message.Player]].RemovePlayer(message.Player)
 							g.PlayerDataChannels[message.Player] <- &response
@@ -159,7 +174,9 @@ func (g *GameInstance) GameInstanceRun() {
 func (g *GameInstance) tryCreateRoom(room string) (*GameRoom, error) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	log.Println("tryCreateRoom - Start")
+	if glog.V(3) {
+		glog.Infoln("DEBUG tryCreateRoom - Start")
+	}
 	if _, ok := g.Rooms[room]; !ok {
 		room := createRoom(room, g)
 		g.Rooms[room.Name] = room

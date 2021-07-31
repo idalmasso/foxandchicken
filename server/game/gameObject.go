@@ -7,7 +7,7 @@ import (
 )
 
 type GameObject struct {
-	size       common.Vector2
+	size       float64
 	Position   common.Vector2
 	rotation   float64
 	behaviours map[GameBehaviourEnum]gameBehaviour
@@ -21,12 +21,13 @@ type gameBehaviour interface {
 	getType() GameBehaviourEnum
 }
 
-func NewGameObject() *GameObject {
+func NewGameObject(gameRoom *GameRoom) *GameObject {
 	g := GameObject{
-		size:       common.Vector2{X: 1, Y: 1},
+		size: 1.0,
 		Position:   common.Vector2{X: 0, Y: 0},
 		rotation:   0,
 		behaviours: make(map[GameBehaviourEnum]gameBehaviour),
+		room: gameRoom,
 	}
 	return &g
 }

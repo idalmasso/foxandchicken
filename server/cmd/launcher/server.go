@@ -1,17 +1,27 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/golang/glog"
 	"github.com/idalmasso/foxandchicken/server/game"
 	"github.com/idalmasso/foxandchicken/server/gameserver"
 )
+func init(){
+    flag.Set("logtostderr", "true")
+    //flag.Set("stderrthreshold", "WARNING")
+    flag.Set("v", "2")
+    flag.Parse()
+}
 
 func main() {
+	defer glog.Flush()
+	
 	gameInstance := game.NewInstance()
 	r := chi.NewRouter()
 	server := &http.Server{

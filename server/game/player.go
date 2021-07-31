@@ -28,7 +28,7 @@ func (p *PlayerGameData) SetInput(a common.Vector2) {
 
 func NewPlayer(username string, characterType CharacterType, gameRoom *GameRoom) *PlayerGameData {
 	p := PlayerGameData{Username: username, playerCharacterType: characterType}
-	p.gameObject = NewGameObject()
+	p.gameObject = NewGameObject(gameRoom)
 	moving := MovingObject{MaxVelocity: gameRoom.MaxVelocity,
 		Drag: gameRoom.Drag}
 	p.gameObject.AddBehaviour(&moving)

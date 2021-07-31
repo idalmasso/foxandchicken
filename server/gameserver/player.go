@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
 	"github.com/idalmasso/foxandchicken/server/game"
 	"github.com/idalmasso/foxandchicken/server/game/messaging"
@@ -43,7 +43,9 @@ func (p *Player) UpdateWebSocket(conn *websocket.Conn) {
 //PlayerCycle is the cycle of a player when not in the room
 func (p *Player) PlayerCycle() {
 	if err := p.ReadUsername(); err != nil {
-		log.Println("Error reading username, returning")
+		if glog.V(2) {
+			glog.Infoln("Player.PlayerCycle - Game instance starting")
+		}
 		return
 	}
 	go p.PlayerBroadcastListener()
@@ -53,19 +55,27 @@ func (p *Player) PlayerCycle() {
 		if err := p.Conn.ReadJSON(&mex); err != nil {
 			var jErr *json.SyntaxError
 			if errors.As(err, &jErr) {
-				log.Println("ERROR "+p.username, "cannot decode the message", err.Error())
+				if glog.V(1) {
+					glog.Warningln("Player.PlayerCycle - ERROR "+p.username, "cannot decode the message", err.Error())
+				}
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
 			} else {
-				log.Println(p.username, "Timeout")
+				if glog.V(2) {
+					glog.Infoln("Player.PlayerCycle - ERROR "+p.username, "cannot decode the message", err.Error())
+				}
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
 				p.GameInstance.RemovePlayer(p.username)
 				p.Close()
 
-				log.Println(p.username, "End of player cycle")
+				if glog.V(2) {
+					glog.Infoln("Player.PlayerCycle - End of player cycle")
+				}
 				return
 			}
 		}
-		fmt.Println("Received message " + mex.Message + " from user " + p.username)
+		if glog.V(3) {
+			glog.Infoln("DEBUG - Player.PlayerCycle - Received message ",mex.Action,":'", mex.Message, "'" , " from user " , p.username)
+		}
 		switch mex.Action {
 		case ActionMessageCreateRoom:
 			if err := p.tryCreateRoom(mex.Message); err != nil {
@@ -221,10 +231,14 @@ func (p *Player) PlayerBroadcastListener() {
 	for {
 		select {
 		case <-p.EndPlayer:
-			log.Println(p.username, "PlayerBroadcastListener exit")
+			if glog.V(2) {
+				glog.Infoln("Player.PlayerBroadcastListener - End player")
+			}
 			return
 		case m := <-p.GameInstance.PlayerDataChannelsBroadcasts[p.username]:
-			log.Println(p.username, "PlayerBroadcastListener", "Game server lock")
+			if glog.V(3) {
+				glog.Infoln("DEBUG - Player.PlayerBroadcastListener - player lock", p.username)
+			}
 			if m != nil {
 				p.mutex.Lock()
 
@@ -234,7 +248,9 @@ func (p *Player) PlayerBroadcastListener() {
 						p.Conn.WriteJSON(singleStringReturnMessage{Message: "got message broadcast" + m.ErrorMessage()})
 					}
 				}
-				log.Println(p.username, "PlayerBroadcastListener", "Game server unlock")
+				if glog.V(3) {
+					glog.Infoln("DEBUG - Player.PlayerBroadcastListener - player unlock", p.username)
+				}
 				p.mutex.Unlock()
 			}
 		}
@@ -243,7 +259,9 @@ func (p *Player) PlayerBroadcastListener() {
 
 //Close close the player handles
 func (p *Player) Close() {
-	log.Println(p.username, "Player close start")
+	if glog.V(3) {
+		glog.Infoln("DEBUG - Player.PlayerClose start", p.username)
+	}
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	if !p.IsClosing {
@@ -257,6 +275,8 @@ func (p *Player) Close() {
 		}
 		p.EndPlayer <- true
 		p.Conn.Close()
-		log.Println(p.username, "Player close end")
+		if glog.V(3) {
+			glog.Infoln("DEBUG - Player.PlayerClose end", p.username)
+		}
 	}
 }

@@ -21,8 +21,23 @@ func (o *MovingObject) init(g *GameObject) {
 }
 
 func (o *MovingObject) update(ts float64) {
-	o.gameObject.Position = common.VectorSum(o.gameObject.Position, o.Velocity.ScalarProduct(ts))
-	o.gameObject.Position = o.gameObject.Position.ClampVector(0, o.gameObject.room.sizeX, 0, o.gameObject.room.sizeY)
+	var selectedPosition common.Vector2
+	selectedPosition = common.VectorSum(o.gameObject.Position, o.Velocity.ScalarProduct(ts))
+	selectedPosition = selectedPosition.ClampVector(0, o.gameObject.room.sizeX, 0, o.gameObject.room.sizeY)
+	objects := o.gameObject.room.gameObjectsInPoint(selectedPosition)
+	found:=false
+	for _, obj:= range(objects){
+		if obj!=o.gameObject {
+			found=true
+			break 
+		}
+	}
+	if !found{
+		o.gameObject.room.objectMove(o.gameObject, o.gameObject.Position, selectedPosition )
+		o.gameObject.Position = selectedPosition
+
+	}
+	
 	if o.Acceleration.X == 0 && o.Acceleration.Y == 0 {
 
 		magnitude := o.Velocity.SqrtMagnitude()

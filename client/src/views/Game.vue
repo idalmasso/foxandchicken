@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="header-div">
-    <h1>Game</h1>
-    <button @click="leaveRoom">Leave room</button>
+      <h1>Game</h1>
+      <button @click="leaveRoom">Leave room</button>
     </div>
     <div id="container"></div>
   </div>
@@ -46,7 +46,12 @@ export default {
       this.isLerping = false;
       this.animating = true;
       this.vectorEnd = new Three.Vector3();
-      this.camera = new Three.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.01, 12);
+      this.camera = new Three.PerspectiveCamera(
+        70,
+        container.clientWidth / container.clientHeight,
+        0.01,
+        12
+      );
       // this.camera.position.x = 50;
       // this.camera.position.y = 50;
       this.camera.position.z = 10;
@@ -81,7 +86,11 @@ export default {
           this.meshes[username].rotation.y += 0.02;
         }
         if (username === this.username) {
-          if (!this.isLerping && (this.camera.position.x !== position.x || this.camera.position.y !== position.y)) {
+          if (
+            !this.isLerping &&
+            (this.camera.position.x !== position.x ||
+              this.camera.position.y !== position.y)
+          ) {
             this.cameraStart = timeStamp;
             this.vectorEnd.x = position.x;
             this.vectorEnd.y = position.y;
@@ -89,7 +98,10 @@ export default {
             this.isLerping = true;
           }
           if (this.cameraStart !== 0) {
-            this.camera.position.lerp(this.vectorEnd, (timeStamp - this.cameraStart) / this.lerpDuration);
+            this.camera.position.lerp(
+              this.vectorEnd,
+              (timeStamp - this.cameraStart) / this.lerpDuration
+            );
             this.meshes[username].position.x = this.camera.position.x;
             this.meshes[username].position.y = this.camera.position.y;
             if (timeStamp > this.cameraStart + this.lerpDuration) {
@@ -109,9 +121,9 @@ export default {
     },
     addObject(posX, posY, username) {
       if (username === this.username) {
-        this.meshes[username] = this.addBox(0.15, 0.15, 0.15, posX, posY, 0.1);
+        this.meshes[username] = this.addBox(1, 1, 1, posX, posY, 0.1);
       } else {
-        this.meshes[username] = this.addSphere(0.15, posX, posY, 0.1);
+        this.meshes[username] = this.addSphere(1, posX, posY, 0.1);
       }
       var canvas = document.createElement('canvas');
       canvas.width = 256;
@@ -140,7 +152,7 @@ export default {
     },
     addSphere(radius, posX, posY, posZ) {
       this.$showLog && console.log('adding a sphere');
-      const geometry = new Three.SphereGeometry(radius);
+      const geometry = new Three.SphereGeometry(radius, 48);
       const material = new Three.MeshNormalMaterial();
       const mesh = new Three.Mesh(geometry, material);
       mesh.position.x = posX;
@@ -152,7 +164,10 @@ export default {
     addBackground(sizeX, sizeY) {
       this.$showLog && console.log('adding background');
       const geometry = new Three.BoxGeometry(sizeX, sizeY, 0.1);
-      const material = new Three.MeshBasicMaterial({ color: 0x344522, wireframe: false });
+      const material = new Three.MeshBasicMaterial({
+        color: 0x344522,
+        wireframe: false
+      });
       const mesh = new Three.Mesh(geometry, material);
       mesh.position.x = sizeX / 2;
       mesh.position.y = sizeY / 2;
@@ -211,19 +226,19 @@ export default {
 </script>
 
 <style scoped>
-  #container {
-    width: 100%;
-    height: 75vh;
-  }
-  .header-div {
-    display: flex;
-    justify-content: space-between;
-  }
-  .header-div > button {
-    margin-left: auto;
-    border-radius: 15px;
-    height: 60px;
-    align-self: center;
-    background-color: cyan;
-  }
+#container {
+  width: 100%;
+  height: 75vh;
+}
+.header-div {
+  display: flex;
+  justify-content: space-between;
+}
+.header-div > button {
+  margin-left: auto;
+  border-radius: 15px;
+  height: 60px;
+  align-self: center;
+  background-color: cyan;
+}
 </style>
