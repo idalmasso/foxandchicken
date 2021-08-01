@@ -27,6 +27,7 @@ type movementStruct struct {
 	AccelerationX float64 `json:"a_x"`
 	AccelerationY float64 `json:"a_y"`
 	Rotation      float64 `json:"rotation"`
+	ActionPressed bool    `json:"action"`
 }
 
 //movemementMessage is the message sent to and from the client with the position/velocity of the player

@@ -210,6 +210,10 @@ export default {
           case 'KeyD':
             this.changeButtonState({ button: 'right', isPressed: pressed });
             break;
+          case 'KeyE':
+          case 'Space':
+            this.changeButtonState({ button: 'action', isPressed: pressed });
+            break;
           default:
             this.$showLog && console.log(code);
         }

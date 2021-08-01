@@ -14,6 +14,7 @@ export default createStore({
     downPressed: false,
     rightPressed: false,
     leftPressed: false,
+    actionPressed: false,
     accelX: 0,
     accelY: 0
   },
@@ -59,14 +60,16 @@ export default createStore({
     },
     SETRIGHTBUTTONPRESSED(state, pressed) {
       state.rightPressed = pressed;
+    },
+    SETACTIONBUTTONPRESSED(state, pressed) {
+      state.actionPressed = pressed;
     }
   },
   actions: {
     login(context, username) {
       if (context.getters.connection == null) {
-        var port = process.env.NODE_ENV === 'development'
-          ? 3000
-          : location.port;
+        var port =
+          process.env.NODE_ENV === 'development' ? 3000 : location.port;
         var conn = new WebSocket(
           'ws://' + window.location.hostname + ':' + port + '/api/ws'
         );
@@ -182,7 +185,8 @@ export default createStore({
             action: 'MOVEMENT',
             message: {
               a_x: acceleration.x,
-              a_y: acceleration.y
+              a_y: acceleration.y,
+              action: context.state.actionPressed
             }
           })
         );
@@ -217,6 +221,11 @@ export default createStore({
               calcAccel();
             }
             break;
+          case 'action':
+            if (context.getters.buttonsPressed.actionPressed !== isPressed) {
+              context.commit('SETACTIONBUTTONPRESSED', isPressed);
+              calcAccel();
+            }
         }
       }
     }
@@ -245,7 +254,8 @@ export default createStore({
         up: state.upPressed,
         down: state.downPressed,
         right: state.rightPressed,
-        left: state.leftPressed
+        left: state.leftPressed,
+        action: state.actionPressed
       };
     }
   },

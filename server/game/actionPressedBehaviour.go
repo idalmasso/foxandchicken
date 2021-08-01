@@ -1,8 +1,8 @@
 package game
 
-type playerActionPerform func(*playerActionBehaviour)
+type playerActionPerform func(*playerActionObject)
 
-type playerActionBehaviour struct {
+type playerActionObject struct {
 	isPerforming    bool
 	pressed         bool
 	durationSeconds float64
@@ -11,13 +11,13 @@ type playerActionBehaviour struct {
 	parentGO        *GameObject
 }
 
-func (b *playerActionBehaviour) init(g *GameObject) {
+func (b *playerActionObject) init(g *GameObject) {
 	b.isPerforming = false
 	b.pressed = false
 	b.parentGO = g
 }
 
-func (b *playerActionBehaviour) update(ts float64) {
+func (b *playerActionObject) update(ts float64) {
 	if b.pressed && !b.isPerforming {
 		b.actualTime = 0
 		b.isPerforming = true
@@ -33,9 +33,9 @@ func (b *playerActionBehaviour) update(ts float64) {
 	}
 }
 
-func (b *playerActionBehaviour) actionPressed(pressed bool) {
+func (b *playerActionObject) actionPressed(pressed bool) {
 	b.pressed = pressed
 }
-func (b *playerActionBehaviour) getType() GameBehaviourEnum {
+func (b *playerActionObject) getType() GameBehaviourEnum {
 	return PlayerActionBehaviour
 }

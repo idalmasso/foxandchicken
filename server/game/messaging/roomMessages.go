@@ -8,6 +8,7 @@ type CommRoomMessageMovePlayer struct {
 	Position     common.Vector2 `json:"position"`
 	Velocity     common.Vector2 `json:"velocity"`
 	Acceleration common.Vector2 `json:"acceleration"`
+	ActionPressed bool					`json:"action"`
 	Rotation     float64        `json:"rotation"`
 	Timestamp    int64          `json:"ts"`
 }
@@ -61,6 +62,7 @@ func (m *CommRoomMessageResponse) ErrorMessage() string {
 func (m *CommRoomMessageResponse) GetMessageType() MessageType {
 	return RoomMessageTypeResponseMessage
 }
+
 
 type RoomMessageValue interface {
 	GetMessageType() MessageType

@@ -6,6 +6,7 @@ type PlayerInput struct {
 	directionInput       common.Vector2
 	actionPressed        bool
 	movingObjectBehavour *MovingObject
+	actionBehaviour *playerActionObject 
 }
 
 func (i *PlayerInput) init(g *GameObject) {
@@ -16,12 +17,17 @@ func (i *PlayerInput) init(g *GameObject) {
 	} else {
 		panic("Error in code, no behaviour correct")
 	}
+	if mo, ok := g.behaviours[PlayerActionBehaviour]; ok {
+		i.actionBehaviour = mo.(*playerActionObject)
+	} else {
+		panic("Error in code, no action behaviour correct")
+	}
 }
 
 func (i *PlayerInput) update(ts float64) {
 	i.movingObjectBehavour.Acceleration.X = i.directionInput.X
 	i.movingObjectBehavour.Acceleration.Y = i.directionInput.Y
-	//TODO: dispatch here the "action" to some other behaviour
+	i.actionBehaviour.actionPressed(i.actionPressed)
 }
 func (i *PlayerInput) getType() GameBehaviourEnum {
 	return PlayerInputBehaviour

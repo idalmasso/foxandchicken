@@ -84,8 +84,8 @@ func (g *GameRoom) Run() {
 				case messaging.RoomMessageTypeMovePlayer:
 					m := val.(*messaging.CommRoomMessageMovePlayer)
 					g.playerInput(m)
-
 				}
+				
 			} else {
 				if glog.V(1) {
 					glog.Warningln("GameRoom.Run - Got a null room message")
@@ -165,7 +165,7 @@ func (g *GameRoom) playerInput(m *messaging.CommRoomMessageMovePlayer) {
 	if magnitude != 0 {
 		m.Acceleration = m.Acceleration.ScalarProduct(g.MaxAcceleration / magnitude)
 	}
-	g.Players[m.Player].SetInput(m.Acceleration)
+	g.Players[m.Player].SetInput(m.Acceleration, m.ActionPressed)
 }
 
 //RemovePlayer removes a player from the room
@@ -198,7 +198,11 @@ func (g *GameRoom) RemovePlayer(username string) {
 
 //AddPlayer add a player in the room
 func (g *GameRoom) AddPlayer(username string) {
-	g.Players[username] = NewPlayer(username, CharacterTypeFox, g)
+	if len(g.Players)%2==0{
+		g.Players[username] = NewPlayer(username, CharacterTypeFox, g)
+	} else {
+		g.Players[username] = NewPlayer(username, CharacterTypeChicken, g)
+	}
 	g.RoomOutputChannels[username] = make(chan messaging.RoomMessageValue)
 	
 	g.addGameObject(g.Players[username].gameObject)

@@ -118,7 +118,7 @@ func (p *Player) PlayerRoomInputCycle() error {
 				position := common.Vector2{X: m.PositionX, Y: m.PositionY}
 				velocity := common.Vector2{X: m.VelocityX, Y: m.VelocityY}
 				acceleration := common.Vector2{X: m.AccelerationX, Y: m.AccelerationY}
-				sMex := messaging.CommRoomMessageMovePlayer{Player: p.username, Position: position, Velocity: velocity, Rotation: m.Rotation, Acceleration: acceleration}
+				sMex := messaging.CommRoomMessageMovePlayer{Player: p.username,ActionPressed: m.ActionPressed,  Position: position, Velocity: velocity, Rotation: m.Rotation, Acceleration: acceleration}
 				if glog.V(3) {
 					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - ActionMessageMovement", p.username, sMex)
 				}

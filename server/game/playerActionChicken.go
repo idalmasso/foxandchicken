@@ -1,5 +1,5 @@
 package game
 
-func chickenAction(b *playerActionBehaviour) {
+func chickenAction(b *playerActionObject) {
 
 }

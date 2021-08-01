@@ -22,9 +22,10 @@ type PlayerGameData struct {
 	mutex               sync.RWMutex
 }
 
-func (p *PlayerGameData) SetInput(a common.Vector2) {
-	p.playerInput.SetInput(a, false)
+func (p *PlayerGameData) SetInput(a common.Vector2, actionPressed bool) {
+	p.playerInput.SetInput(a, actionPressed)
 }
+
 
 func NewPlayer(username string, characterType CharacterType, gameRoom *GameRoom) *PlayerGameData {
 	p := PlayerGameData{Username: username, playerCharacterType: characterType}
@@ -34,7 +35,7 @@ func NewPlayer(username string, characterType CharacterType, gameRoom *GameRoom)
 	p.gameObject.AddBehaviour(&moving)
 	p.playerInput = &PlayerInput{}
 	p.gameObject.AddBehaviour(p.playerInput)
-	action := playerActionBehaviour{durationSeconds: 0.5}
+	action := playerActionObject{durationSeconds: 0.5}
 	switch characterType {
 	case CharacterTypeFox:
 		action.playerAction = foxAction
@@ -42,6 +43,10 @@ func NewPlayer(username string, characterType CharacterType, gameRoom *GameRoom)
 		action.playerAction = chickenAction
 	}
 	p.gameObject.AddBehaviour(&action)
+	if characterType == CharacterTypeChicken {
+		killable := chickenKillableObject{hitPoints: 100}
+		p.gameObject.AddBehaviour(&killable)
+	}
 	p.gameObject.Init()
 	return &p
 }

@@ -13,4 +13,5 @@ const (
 	RoomMessageTypeJoinPlayer
 	RoomMessageTypeLeftPlayer
 	RoomMessageTypeResponseMessage
+	RoomMessageTypeActionPlayer
 )

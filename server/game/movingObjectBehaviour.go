@@ -35,12 +35,9 @@ func (o *MovingObject) update(ts float64) {
 	if !found{
 		o.gameObject.room.objectMove(o.gameObject, o.gameObject.Position, selectedPosition )
 		o.gameObject.Position = selectedPosition
-
 	}
-	
+	magnitude := o.Velocity.SqrtMagnitude()
 	if o.Acceleration.X == 0 && o.Acceleration.Y == 0 {
-
-		magnitude := o.Velocity.SqrtMagnitude()
 		if magnitude < 0.15 {
 			o.Velocity.X = 0
 			o.Velocity.Y = 0
@@ -49,7 +46,7 @@ func (o *MovingObject) update(ts float64) {
 		o.Velocity = common.VectorSum(o.Velocity, o.Velocity.ScalarProduct(-o.Drag*ts))
 	} else {
 		o.Velocity = common.VectorSum(o.Velocity, o.Acceleration.ScalarProduct(ts))
-		magnitude := o.Velocity.SqrtMagnitude()
+		
 
 		if magnitude > o.MaxVelocity {
 			o.Velocity = o.Velocity.ScalarProduct(o.MaxVelocity / magnitude)
@@ -61,6 +58,16 @@ func (o *MovingObject) update(ts float64) {
 	if math.Abs(o.Acceleration.Y) == 0 && math.Abs(o.Velocity.Y) < 0.1 {
 		o.Velocity.Y = 0
 	}
+	if o.Velocity.X==0 {
+		if o.Velocity.Y>0{
+			o.gameObject.rotation = math.Pi
+		} else {
+			o.gameObject.rotation = -math.Pi
+		}
+	} else {
+		o.gameObject.rotation = math.Atan(o.Velocity.Y/o.Velocity.X)
+	}
+	
 }
 
 func (i *MovingObject) getType() GameBehaviourEnum {
