@@ -19,6 +19,7 @@ export default {
       scene: null,
       renderer: null,
       meshes: null,
+      gameObjects: null,
       now: undefined,
       createdBox: false,
       cameraStart: 0,
@@ -42,7 +43,7 @@ export default {
     init() {
       const container = document.getElementById('container');
       this.cameraStart = 0;
-      this.lerpDuration = 25;
+      this.lerpDuration = 50;
       this.isLerping = false;
       this.animating = true;
       this.vectorEnd = new Three.Vector3();
@@ -58,6 +59,7 @@ export default {
       this.scene = new Three.Scene();
       this.addBackground(20, 20);
       this.meshes = [];
+      this.gameObjects = [];
       for (const username in this.positions) {
         const position = this.positions[username].position;
         this.addObject(position.x, position.y, username);
@@ -80,12 +82,19 @@ export default {
         if (typeof this.meshes[username] === 'undefined') {
           this.addObject(position.x, position.y, username);
         } else {
-          this.meshes[username].position.x = position.x;
-          this.meshes[username].position.y = position.y;
+          this.gameObjects[username].position.x = position.x;
+          this.gameObjects[username].position.y = position.y;
           this.meshes[username].rotation.x += 0.01;
           this.meshes[username].rotation.y += 0.02;
         }
         if (username === this.username) {
+          if (
+            this.vectorEnd.x !== position.x ||
+            this.vectorEnd.y !== position.y
+          ) {
+            this.isLerping = false;
+            this.$showLog && console.log('Stopped for positions changed');
+          }
           if (
             !this.isLerping &&
             (this.camera.position.x !== position.x ||
@@ -97,15 +106,16 @@ export default {
             this.vectorEnd.z = this.camera.position.z;
             this.isLerping = true;
           }
-          if (this.cameraStart !== 0) {
+          if (this.isLerping) {
             this.camera.position.lerp(
               this.vectorEnd,
               (timeStamp - this.cameraStart) / this.lerpDuration
             );
-            this.meshes[username].position.x = this.camera.position.x;
-            this.meshes[username].position.y = this.camera.position.y;
+            this.gameObjects[username].position.x = this.camera.position.x;
+            this.gameObjects[username].position.y = this.camera.position.y;
             if (timeStamp > this.cameraStart + this.lerpDuration) {
               this.isLerping = false;
+              this.$showLog && console.log('Stopped for end of lerp');
             }
           }
         }
@@ -113,21 +123,29 @@ export default {
       for (const username in this.meshes) {
         if (typeof this.positions[username] === 'undefined') {
           this.$showLog && console.log('REMOVING ' + username);
-          this.scene.remove(this.meshes[username]);
+          this.scene.remove(this.gameObjects[username]);
           this.meshes.splice(username, 1);
+          this.gameObjects.splice(username, 1);
         }
       }
       this.renderer.render(this.scene, this.camera);
     },
     addObject(posX, posY, username) {
       if (username === this.username) {
-        this.meshes[username] = this.addBox(1, 1, 1, posX, posY, 0.1);
+        this.meshes[username] = this.addBox(1, 1, 1, 0, 0, 0);
       } else {
-        this.meshes[username] = this.addSphere(1, posX, posY, 0.1);
+        this.meshes[username] = this.addSphere(1, 0, 0, 0);
       }
+      this.gameObjects[username] = new Three.Object3D();
+      this.gameObjects[username].position.x = posX;
+      this.gameObjects[username].position.y = posY;
+      this.gameObjects[username].position.z = 0.1;
+      this.gameObjects[username].add(this.meshes[username]);
+      this.scene.add(this.gameObjects[username]);
       var canvas = document.createElement('canvas');
       canvas.width = 256;
       canvas.height = 256;
+
       var ctx = canvas.getContext('2d');
       ctx.font = '44pt Arial';
       ctx.fillStyle = 'white';
@@ -137,7 +155,8 @@ export default {
       tex.needsUpdate = true;
       var spriteMat = new Three.SpriteMaterial({ map: tex });
       var sprite = new Three.Sprite(spriteMat);
-      this.meshes[username].add(sprite);
+      sprite.position.set(0, 1, 0);
+      this.gameObjects[username].add(sprite);
     },
     addBox(x, y, z, posX, posY, posZ) {
       this.$showLog && console.log('adding a box');
@@ -147,7 +166,6 @@ export default {
       mesh.position.x = posX;
       mesh.position.y = posY;
       mesh.position.z = posZ;
-      this.scene.add(mesh);
       return mesh;
     },
     addSphere(radius, posX, posY, posZ) {
@@ -158,7 +176,6 @@ export default {
       mesh.position.x = posX;
       mesh.position.y = posY;
       mesh.position.z = posZ;
-      this.scene.add(mesh);
       return mesh;
     },
     addBackground(sizeX, sizeY) {

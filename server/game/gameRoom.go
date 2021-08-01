@@ -71,13 +71,13 @@ func (g *GameRoom) Run() {
 	for {
 		select {
 		case <-g.roomStopChannel:
-			if glog.V(2) {
-				glog.Infoln("GameRoom.Run - Room", g.Name, "Game run stop")
+			if glog.V(3) {
+				glog.Infoln("DEBUG - GameRoom.Run - Room", g.Name, "Game run stop")
 			}
 			return
 		case val := <-g.RoomInputChannel:
-			if glog.V(2) {
-				glog.Infoln("GameRoom.Run - Read room input channel")
+			if glog.V(3) {
+				glog.Infoln("DEBUG - GameRoom.Run - Read room input channel")
 			}
 			if val != nil {
 				switch val.GetMessageType() {
