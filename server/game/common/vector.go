@@ -1,6 +1,9 @@
 package common
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 type Vector2 struct {
 	X float64 `json:"x"`
@@ -38,4 +41,8 @@ func (v Vector2) ClampVector(minX, maxX, minY, maxY float64) Vector2 {
 
 func NullVector() Vector2 {
 	return Vector2{X: 0, Y: 0}
+}
+
+func (v Vector2) String() string {
+	return fmt.Sprintf("(%v, %v)", v.X, v.Y)
 }

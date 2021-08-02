@@ -1,20 +1,36 @@
 package game
 
-type chickenKillableObject struct {
+import "github.com/golang/glog"
+
+type killableObject struct {
 	hitPoints int
 }
 
-func (k *chickenKillableObject) init(g *GameObject) {
-	k.hitPoints =0
+func (k *killableObject) init(g *GameObject) {
+	k.hitPoints = 0
 }
 
-func (o *chickenKillableObject) update(ts float64) {
+func (o *killableObject) update(ts float64) {
 }
 
-func (i *chickenKillableObject) getType() GameBehaviourEnum {
-	return ChickenkillableObjectBehaviour
+func (i *killableObject) getType() GameBehaviourEnum {
+	return KillableObjectBehaviour
 }
 
-func (i *chickenKillableObject) hit(damage int) {
-	i.hitPoints -= damage
+func (i *killableObject) hit(damage int) {
+	if glog.V(3) {
+		glog.Infoln("DEBUG - killableObject hit for damage", damage)
+	}
+	if i.hitPoints > 0 {
+		i.hitPoints -= damage
+		if i.hitPoints <= 0 {
+			i.die()
+		}
+	}
+}
+func (i *killableObject) die() {
+	if glog.V(2) {
+		glog.Infoln("killableObject dead")
+	}
+	//TODO: Todo
 }

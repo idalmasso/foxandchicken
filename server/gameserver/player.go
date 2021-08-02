@@ -74,7 +74,7 @@ func (p *Player) PlayerCycle() {
 			}
 		}
 		if glog.V(3) {
-			glog.Infoln("DEBUG - Player.PlayerCycle - Received message ",mex.Action,":'", mex.Message, "'" , " from user " , p.username)
+			glog.Infoln("DEBUG - Player.PlayerCycle - Received message ", mex.Action, ":'", mex.Message, "'", " from user ", p.username)
 		}
 		switch mex.Action {
 		case ActionMessageCreateRoom:
@@ -231,12 +231,12 @@ func (p *Player) PlayerBroadcastListener() {
 	for {
 		select {
 		case <-p.EndPlayer:
-			if glog.V(2) {
+			if glog.V(3) {
 				glog.Infoln("Player.PlayerBroadcastListener - End player")
 			}
 			return
 		case m := <-p.GameInstance.PlayerDataChannelsBroadcasts[p.username]:
-			if glog.V(3) {
+			if glog.V(4) {
 				glog.Infoln("DEBUG - Player.PlayerBroadcastListener - player lock", p.username)
 			}
 			if m != nil {
@@ -248,7 +248,7 @@ func (p *Player) PlayerBroadcastListener() {
 						p.Conn.WriteJSON(singleStringReturnMessage{Message: "got message broadcast" + m.ErrorMessage()})
 					}
 				}
-				if glog.V(3) {
+				if glog.V(4) {
 					glog.Infoln("DEBUG - Player.PlayerBroadcastListener - player unlock", p.username)
 				}
 				p.mutex.Unlock()

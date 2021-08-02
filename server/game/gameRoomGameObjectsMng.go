@@ -3,40 +3,39 @@ package game
 import "github.com/idalmasso/foxandchicken/server/game/common"
 
 func (g *GameRoom) addGameObject(gameObject *GameObject) {
-	cell:=g.getCellNum(gameObject.Position.X, gameObject.Position.Y)
+	cell := g.getCellNum(gameObject.Position.X, gameObject.Position.Y)
 	g.cellsToGameObjectmap[cell][gameObject] = struct{}{}
 }
-func (g *GameRoom)gameObjectsInPoint(point common.Vector2) []*GameObject {
-	objects:=make([]*GameObject,0)
-	cell:=g.getCellNum(point.X, point.Y)
-	objects=g.pointIntersectObjectsInCell(point, objects, cell)
-	cells:=g.getCellNeightbours(cell)
-	for _,cell=range(cells){
-		objects=g.pointIntersectObjectsInCell(point, objects, cell)
+func (g *GameRoom) gameObjectsInPoint(point common.Vector2) []*GameObject {
+	objects := make([]*GameObject, 0)
+	cell := g.getCellNum(point.X, point.Y)
+	objects = g.pointIntersectObjectsInCell(point, objects, cell)
+	cells := g.getCellNeightbours(cell)
+	for _, cell = range cells {
+		objects = g.pointIntersectObjectsInCell(point, objects, cell)
 	}
 	return objects
 }
 
-func (g *GameRoom) pointIntersectObjectsInCell(point common.Vector2,objects []*GameObject, cell int)[]*GameObject{
-	for p, _:=range(g.cellsToGameObjectmap[cell]){
-		v:=common.Vector2{X: point.X-p.Position.X, Y: point.Y-p.Position.Y}
-		if v.Magnitude()<p.size*p.size {
-			objects=append(objects, p)
+func (g *GameRoom) pointIntersectObjectsInCell(point common.Vector2, objects []*GameObject, cell int) []*GameObject {
+	for p := range g.cellsToGameObjectmap[cell] {
+		v := common.Vector2{X: point.X - p.Position.X, Y: point.Y - p.Position.Y}
+		if v.Magnitude() < p.size*p.size {
+			objects = append(objects, p)
 		}
 	}
 	return objects
-} 
+}
 
-func (g *GameRoom) objectMove(gameObject *GameObject, from, to common.Vector2){
+func (g *GameRoom) objectMove(gameObject *GameObject, from, to common.Vector2) {
 	fromCell := g.getCellNum(from.X, from.Y)
-	toCell:=g.getCellNum(to.X, to.Y)
-	if fromCell==toCell{
+	toCell := g.getCellNum(to.X, to.Y)
+	if fromCell == toCell {
 		return
 	}
 	delete(g.cellsToGameObjectmap[fromCell], gameObject)
-	g.cellsToGameObjectmap[toCell][gameObject]=struct{}{}
+	g.cellsToGameObjectmap[toCell][gameObject] = struct{}{}
 }
-
 
 //Get the cellnum in 1-based grid
 func (g *GameRoom) getCellNum(x, y float64) int {

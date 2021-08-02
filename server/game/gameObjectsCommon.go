@@ -6,7 +6,7 @@ const (
 	MovingObjectBehaviour GameBehaviourEnum = iota
 	PlayerInputBehaviour
 	PlayerActionBehaviour
-	ChickenkillableObjectBehaviour
+	KillableObjectBehaviour
 )
 
 func behaviourPriorities() []GameBehaviourEnum {

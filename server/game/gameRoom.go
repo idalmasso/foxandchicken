@@ -16,21 +16,20 @@ type GameRoomNumPlayer struct {
 
 //GameRoom struct containing the game room data
 type GameRoom struct {
-	Name               string `json:"name"`
-	Players            map[string]*PlayerGameData
-	sizeX, sizeY       float64
-	status             int
-	Instance           *GameInstance
-	mutex              sync.Mutex
-	RoomInputChannel   chan messaging.RoomMessageValue
-	RoomOutputChannels map[string]chan messaging.RoomMessageValue
-	MaxAcceleration    float64
-	MaxVelocity        float64
-	Drag               float64
-	timestamp          int64
-	roomStopChannel    chan bool
-	cellsToGameObjectmap  map[int]map[*GameObject]struct{}
-	
+	Name                 string `json:"name"`
+	Players              map[string]*PlayerGameData
+	sizeX, sizeY         float64
+	status               int
+	Instance             *GameInstance
+	mutex                sync.Mutex
+	RoomInputChannel     chan messaging.RoomMessageValue
+	RoomOutputChannels   map[string]chan messaging.RoomMessageValue
+	MaxAcceleration      float64
+	MaxVelocity          float64
+	Drag                 float64
+	timestamp            int64
+	roomStopChannel      chan bool
+	cellsToGameObjectmap map[int]map[*GameObject]struct{}
 }
 
 //createRoom creates the actual room in a gameinstance
@@ -49,8 +48,8 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 	g.Drag = 0.95
 	g.RoomOutputChannels = make(map[string]chan messaging.RoomMessageValue)
 	g.cellsToGameObjectmap = make(map[int]map[*GameObject]struct{})
-	for x:=0; x<int(g.sizeX*g.sizeY); x++{
-		g.cellsToGameObjectmap[x]= make(map[*GameObject]struct{})
+	for x := 0; x < int(g.sizeX*g.sizeY); x++ {
+		g.cellsToGameObjectmap[x] = make(map[*GameObject]struct{})
 	}
 	g.roomStopChannel = make(chan bool)
 	return &g
@@ -58,12 +57,12 @@ func createRoom(name string, instance *GameInstance) *GameRoom {
 
 //Run is the GameRoom main call
 func (g *GameRoom) Run() {
-	if glog.V(3) {
+	if glog.V(4) {
 		glog.Infoln("DEBUG - GameRoom.Run - Lock")
 	}
 	g.mutex.Lock()
 	g.timestamp = time.Now().UnixNano()
-	if glog.V(3) {
+	if glog.V(4) {
 		glog.Infoln("DEBUG - GameRoom.Run - UnLock")
 	}
 	g.mutex.Unlock()
@@ -76,7 +75,7 @@ func (g *GameRoom) Run() {
 			}
 			return
 		case val := <-g.RoomInputChannel:
-			if glog.V(3) {
+			if glog.V(4) {
 				glog.Infoln("DEBUG - GameRoom.Run - Read room input channel")
 			}
 			if val != nil {
@@ -85,7 +84,7 @@ func (g *GameRoom) Run() {
 					m := val.(*messaging.CommRoomMessageMovePlayer)
 					g.playerInput(m)
 				}
-				
+
 			} else {
 				if glog.V(1) {
 					glog.Warningln("GameRoom.Run - Got a null room message")
@@ -99,7 +98,7 @@ func (g *GameRoom) Run() {
 
 //broadcastMessage send a message to all players in room
 func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
-	if glog.V(3) {
+	if glog.V(4) {
 		glog.Infoln("DEBUG - GameRoom.broadcastMessage - room", g.Name, "broadcast", message.GetMessageType())
 	}
 
@@ -109,7 +108,7 @@ func (g *GameRoom) broadcastMessage(message messaging.RoomMessageValue) {
 			g.RoomOutputChannels[p] <- message
 		}
 	}
-	if glog.V(3) {
+	if glog.V(4) {
 		glog.Infoln("DEBUG - GameRoom.broadcastMessage - room", g.Name, "broadcasted", message.GetMessageType())
 	}
 }
@@ -139,18 +138,15 @@ func (g *GameRoom) updateAndSendData() {
 		return
 	}
 	newTimestamp := time.Now().UnixNano()
-	message := make(messaging.CommRoomMessagePlayersMovement, len(g.Players))
+	message := make(messaging.CommRoomMessagePlayersStatuses, len(g.Players))
 	i := 0
 	deltaT := time.Duration(newTimestamp - g.timestamp).Seconds()
 	//Will be range of gameobjects
-	for username, p := range g.Players {
+	for _, p := range g.Players {
 		p.mutex.Lock()
 		p.gameObject.Update(deltaT)
-		var m messaging.CommRoomMessageMovePlayer
-		m.Position = p.gameObject.Position
-
+		m := p.getStatusMessage()
 		p.mutex.Unlock()
-		m.Player = username
 		m.Timestamp = newTimestamp
 		message[i] = m
 		i++
@@ -173,14 +169,14 @@ func (g *GameRoom) RemovePlayer(username string) {
 	if glog.V(2) {
 		glog.Infoln("GameRoom.RemovePlayer - removing player ", username)
 	}
-	if glog.V(3) {
+	if glog.V(4) {
 		glog.Infoln("DEBUG - GameRoom.RemovePlayer - Lock")
 	}
 	g.mutex.Lock()
 	defer func() {
-		if glog.V(3) {
-		glog.Infoln("DEBUG - GameRoom.RemovePlayer - UnLock")
-	}
+		if glog.V(4) {
+			glog.Infoln("DEBUG - GameRoom.RemovePlayer - UnLock")
+		}
 		g.mutex.Unlock()
 	}()
 
@@ -198,12 +194,12 @@ func (g *GameRoom) RemovePlayer(username string) {
 
 //AddPlayer add a player in the room
 func (g *GameRoom) AddPlayer(username string) {
-	if len(g.Players)%2==0{
+	if len(g.Players)%2 == 0 {
 		g.Players[username] = NewPlayer(username, CharacterTypeFox, g)
 	} else {
 		g.Players[username] = NewPlayer(username, CharacterTypeChicken, g)
 	}
 	g.RoomOutputChannels[username] = make(chan messaging.RoomMessageValue)
-	
+
 	g.addGameObject(g.Players[username].gameObject)
 }

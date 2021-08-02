@@ -3,6 +3,7 @@ package game
 import (
 	"math"
 
+	"github.com/golang/glog"
 	"github.com/idalmasso/foxandchicken/server/game/common"
 )
 
@@ -25,15 +26,15 @@ func (o *MovingObject) update(ts float64) {
 	selectedPosition = common.VectorSum(o.gameObject.Position, o.Velocity.ScalarProduct(ts))
 	selectedPosition = selectedPosition.ClampVector(0, o.gameObject.room.sizeX, 0, o.gameObject.room.sizeY)
 	objects := o.gameObject.room.gameObjectsInPoint(selectedPosition)
-	found:=false
-	for _, obj:= range(objects){
-		if obj!=o.gameObject {
-			found=true
-			break 
+	found := false
+	for _, obj := range objects {
+		if obj != o.gameObject {
+			found = true
+			break
 		}
 	}
-	if !found{
-		o.gameObject.room.objectMove(o.gameObject, o.gameObject.Position, selectedPosition )
+	if !found {
+		o.gameObject.room.objectMove(o.gameObject, o.gameObject.Position, selectedPosition)
 		o.gameObject.Position = selectedPosition
 	}
 	magnitude := o.Velocity.SqrtMagnitude()
@@ -46,7 +47,6 @@ func (o *MovingObject) update(ts float64) {
 		o.Velocity = common.VectorSum(o.Velocity, o.Velocity.ScalarProduct(-o.Drag*ts))
 	} else {
 		o.Velocity = common.VectorSum(o.Velocity, o.Acceleration.ScalarProduct(ts))
-		
 
 		if magnitude > o.MaxVelocity {
 			o.Velocity = o.Velocity.ScalarProduct(o.MaxVelocity / magnitude)
@@ -58,16 +58,22 @@ func (o *MovingObject) update(ts float64) {
 	if math.Abs(o.Acceleration.Y) == 0 && math.Abs(o.Velocity.Y) < 0.1 {
 		o.Velocity.Y = 0
 	}
-	if o.Velocity.X==0 {
-		if o.Velocity.Y>0{
+	if o.Velocity.X == 0 {
+		if o.Velocity.Y > 0 {
 			o.gameObject.rotation = math.Pi
 		} else {
 			o.gameObject.rotation = -math.Pi
 		}
 	} else {
-		o.gameObject.rotation = math.Atan(o.Velocity.Y/o.Velocity.X)
+		o.gameObject.rotation = math.Atan(o.Velocity.Y / o.Velocity.X)
+		if o.Velocity.X < 0 {
+			o.gameObject.rotation += math.Pi
+		}
+		if glog.V(4) {
+			glog.Infoln("DEBUG - change rotation: velocity", o.Velocity, "rotation", o.gameObject.rotation*180/math.Pi)
+		}
 	}
-	
+
 }
 
 func (i *MovingObject) getType() GameBehaviourEnum {

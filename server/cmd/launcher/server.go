@@ -12,16 +12,17 @@ import (
 	"github.com/idalmasso/foxandchicken/server/game"
 	"github.com/idalmasso/foxandchicken/server/gameserver"
 )
-func init(){
-    flag.Set("logtostderr", "true")
-    //flag.Set("stderrthreshold", "WARNING")
-    flag.Set("v", "2")
-    flag.Parse()
+
+func init() {
+	flag.Set("logtostderr", "true")
+	//flag.Set("stderrthreshold", "WARNING")
+	flag.Set("v", "3")
+	flag.Parse()
 }
 
 func main() {
 	defer glog.Flush()
-	
+
 	gameInstance := game.NewInstance()
 	r := chi.NewRouter()
 	server := &http.Server{

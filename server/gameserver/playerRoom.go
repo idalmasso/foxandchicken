@@ -36,13 +36,13 @@ func (p *Player) PlayerRoomInputCycle() error {
 				if glog.V(1) {
 					glog.Warningln("Player.PlayerRoomInputCycle - ERROR "+p.username, "cannot decode the message", err.Error())
 				}
-				if glog.V(3) {
+				if glog.V(4) {
 					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex lock no decode", p.username)
 				}
-				
+
 				p.mutex.Lock()
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: " + err.Error()})
-				if glog.V(3) {
+				if glog.V(4) {
 					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex unlock no decode", p.username)
 				}
 				p.mutex.Unlock()
@@ -50,12 +50,12 @@ func (p *Player) PlayerRoomInputCycle() error {
 				if glog.V(1) {
 					glog.Infoln("Player.PlayerRoomInputCycle - User", p.username, "Timeout")
 				}
-				if glog.V(3) {
+				if glog.V(4) {
 					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex lock timeout", p.username)
 				}
 				p.mutex.Lock()
 				p.Conn.WriteJSON(singleStringReturnMessage{Message: "error: TIMEOUT"})
-				if glog.V(3) {
+				if glog.V(4) {
 					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex unlock timeout", p.username)
 				}
 				p.mutex.Unlock()
@@ -73,13 +73,13 @@ func (p *Player) PlayerRoomInputCycle() error {
 		switch mex.GetAction() {
 		case ActionMessageLeaveRoom:
 			if err := p.tryLeaveRoom(); err != nil {
-				if glog.V(3) {
+				if glog.V(4) {
 					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex lock ActionMessageLeaveRoom with error", p.username)
 				}
 				p.mutex.Lock()
 				p.IsInRoom = false
 				p.Conn.WriteJSON(genericMessage{Action: ActionMessageLeaveRoomResponse, Message: usernameErrorMessage{Username: p.username, Error: err.Error()}})
-				if glog.V(3) {
+				if glog.V(4) {
 					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex unlock ActionMessageLeaveRoom with error", p.username)
 				}
 				p.mutex.Unlock()
@@ -88,14 +88,14 @@ func (p *Player) PlayerRoomInputCycle() error {
 				}
 				return err
 			} else {
-				if glog.V(3) {
+				if glog.V(4) {
 					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex lock ActionMessageLeaveRoom no error", p.username)
 				}
 				p.mutex.Lock()
 				p.Conn.WriteJSON(genericMessage{Action: ActionMessageLeaveRoomResponse, Message: usernameErrorMessage{Username: p.username, Error: ""}})
 				p.IsInRoom = false
 				p.EndGameChannel <- true
-				if glog.V(3) {
+				if glog.V(4) {
 					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - p mutex unlock ActionMessageLeaveRoom no error", p.username)
 				}
 				p.mutex.Unlock()
@@ -118,19 +118,19 @@ func (p *Player) PlayerRoomInputCycle() error {
 				position := common.Vector2{X: m.PositionX, Y: m.PositionY}
 				velocity := common.Vector2{X: m.VelocityX, Y: m.VelocityY}
 				acceleration := common.Vector2{X: m.AccelerationX, Y: m.AccelerationY}
-				sMex := messaging.CommRoomMessageMovePlayer{Player: p.username,ActionPressed: m.ActionPressed,  Position: position, Velocity: velocity, Rotation: m.Rotation, Acceleration: acceleration}
-				if glog.V(3) {
+				sMex := messaging.CommRoomMessageMovePlayer{Player: p.username, ActionPressed: m.ActionPressed, Position: position, Velocity: velocity, Rotation: m.Rotation, Acceleration: acceleration}
+				if glog.V(4) {
 					glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - ActionMessageMovement", p.username, sMex)
 				}
 				p.RoomChannel <- &sMex
 			}
 		default:
-			if glog.V(3) {
+			if glog.V(4) {
 				glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - lock no recognited", p.username)
 			}
 			p.mutex.Lock()
 			p.Conn.WriteJSON(singleStringReturnMessage{Message: "action not recognized"})
-			if glog.V(3) {
+			if glog.V(4) {
 				glog.Infoln("DEBUG - Player.PlayerRoomInputCycle - unlock no recognited", p.username)
 			}
 			p.mutex.Unlock()
@@ -152,14 +152,14 @@ func (p *Player) PlayerRoomGameCycle() {
 			}
 			return
 		case v := <-p.RoomChannelOutput:
-			if glog.V(3) {
+			if glog.V(4) {
 				glog.Infoln("DEBUG - Player.PlayerRoomGameCycle - RoomChannelOutput lock", p.username)
 			}
 			p.mutex.Lock()
 			if !p.IsClosing {
 				switch v.GetMessageType() {
-				case messaging.RoomMessageTypePlayersMovement:
-					moves := v.(*messaging.CommRoomMessagePlayersMovement)
+				case messaging.RoomMessageTypePlayersStatuses:
+					moves := v.(*messaging.CommRoomMessagePlayersStatuses)
 					//log.Println("received message move>", move.Player)
 					if data, err := json.Marshal(moves); err == nil {
 						p.Conn.WriteJSON(message{Action: ActionMessageMovesRoom, Message: string(data)})
@@ -175,7 +175,7 @@ func (p *Player) PlayerRoomGameCycle() {
 					p.Conn.WriteJSON(message{Action: ActionMessageLeaveRoom, Message: mex.Player})
 				}
 			}
-			if glog.V(3) {
+			if glog.V(4) {
 				glog.Infoln("DEBUG - Player.PlayerRoomGameCycle - RoomChannelOutput unlock", p.username)
 			}
 			p.mutex.Unlock()

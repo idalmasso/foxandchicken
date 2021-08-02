@@ -7,12 +7,13 @@ import (
 )
 
 type GameObject struct {
-	size       float64
-	Position   common.Vector2
-	rotation   float64
-	behaviours map[GameBehaviourEnum]gameBehaviour
-	room       *GameRoom
-	mutex      sync.RWMutex
+	gameObjectType GameObjectType
+	size           float64
+	Position       common.Vector2
+	rotation       float64
+	behaviours     map[GameBehaviourEnum]gameBehaviour
+	room           *GameRoom
+	mutex          sync.RWMutex
 }
 
 type gameBehaviour interface {
@@ -21,13 +22,14 @@ type gameBehaviour interface {
 	getType() GameBehaviourEnum
 }
 
-func NewGameObject(gameRoom *GameRoom) *GameObject {
+func NewGameObject(gameRoom *GameRoom, gameObjectType GameObjectType) *GameObject {
 	g := GameObject{
-		size: 1.0,
-		Position:   common.Vector2{X: 0, Y: 0},
-		rotation:   0,
-		behaviours: make(map[GameBehaviourEnum]gameBehaviour),
-		room: gameRoom,
+		size:           1.0,
+		Position:       common.Vector2{X: 0, Y: 0},
+		rotation:       0,
+		behaviours:     make(map[GameBehaviourEnum]gameBehaviour),
+		room:           gameRoom,
+		gameObjectType: gameObjectType,
 	}
 	return &g
 }
