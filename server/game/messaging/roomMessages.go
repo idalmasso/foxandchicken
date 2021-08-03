@@ -23,6 +23,7 @@ func (m *CommRoomMessageMovePlayer) GetMessageType() MessageType {
 //CommRoomMessagePlayerStatus movement and other for players
 type CommRoomMessagePlayerStatus struct {
 	Player           string         `json:"player"`
+	CharacterType    string         `json:"charactertype"`
 	Position         common.Vector2 `json:"position"`
 	Velocity         common.Vector2 `json:"velocity"`
 	ActionPressed    bool           `json:"action"`

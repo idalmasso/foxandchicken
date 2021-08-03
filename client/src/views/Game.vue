@@ -11,6 +11,7 @@
 <script>
 import { mapActions, mapGetters } from 'vuex';
 import * as Three from 'three';
+import HealthBar from '../healthBar/healthBar';
 export default {
   name: 'Game',
   static() {
@@ -18,15 +19,15 @@ export default {
       camera: null,
       scene: null,
       renderer: null,
-      meshes: null,
-      gameObjects: null,
+      playersGameObjects: null,
       now: undefined,
       createdBox: false,
       cameraStart: 0,
       lerpDuration: 0,
       isLerping: false,
       vectorEnd: null,
-      animating: false
+      animating: false,
+      healthBars: null
     };
   },
   computed: {
@@ -53,16 +54,14 @@ export default {
         0.01,
         12
       );
-      // this.camera.position.x = 50;
-      // this.camera.position.y = 50;
       this.camera.position.z = 10;
       this.scene = new Three.Scene();
       this.addBackground(20, 20);
-      this.meshes = [];
-      this.gameObjects = [];
+      this.playersGameObjects = [];
+      this.healthBars = [];
       for (const username in this.positions) {
         const position = this.positions[username].position;
-        this.addObject(position.x, position.y, username);
+        this.addObject(position.x, position.y, username, this.positions[username].hitpoints);
       }
       this.renderer = new Three.WebGLRenderer({ antialias: true });
       this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -79,14 +78,17 @@ export default {
       requestAnimationFrame(this.animate);
       for (const username in this.positions) {
         const position = this.positions[username].position;
-        if (typeof this.meshes[username] === 'undefined') {
-          this.addObject(position.x, position.y, username);
+        if (typeof this.playersGameObjects[username] === 'undefined') {
+          this.addObject(position.x, position.y, username, this.positions[username].hitpoints);
         } else {
-          this.gameObjects[username].position.x = position.x;
-          this.gameObjects[username].position.y = position.y;
-          this.meshes[username].rotation.x += 0.01;
-          this.meshes[username].rotation.y += 0.02;
+          this.playersGameObjects[username].parentObject.position.x = position.x;
+          this.playersGameObjects[username].parentObject.position.y = position.y;
+          this.playersGameObjects[username].meshChild.rotation.x += 0.01;
+          this.playersGameObjects[username].meshChild.rotation.y += 0.02;
+          this.playersGameObjects[username].healthBar.updateHealth(this.positions[username].hitpoints);
+          this.updateHealthBar(username);
         }
+
         if (username === this.username) {
           if (
             this.vectorEnd.x !== position.x ||
@@ -111,8 +113,8 @@ export default {
               this.vectorEnd,
               (timeStamp - this.cameraStart) / this.lerpDuration
             );
-            this.gameObjects[username].position.x = this.camera.position.x;
-            this.gameObjects[username].position.y = this.camera.position.y;
+            this.playersGameObjects[username].parentObject.position.x = this.camera.position.x;
+            this.playersGameObjects[username].parentObject.position.y = this.camera.position.y;
             if (timeStamp > this.cameraStart + this.lerpDuration) {
               this.isLerping = false;
               this.$showLog && console.log('Stopped for end of lerp');
@@ -120,43 +122,76 @@ export default {
           }
         }
       }
-      for (const username in this.meshes) {
+      for (const username in this.playersGameObjects) {
         if (typeof this.positions[username] === 'undefined') {
           this.$showLog && console.log('REMOVING ' + username);
-          this.scene.remove(this.gameObjects[username]);
-          this.meshes.splice(username, 1);
-          this.gameObjects.splice(username, 1);
+          this.scene.remove(this.playersGameObjects[username].parentObject);
+          this.playersGameObjects.splice(username, 1);
         }
       }
       this.renderer.render(this.scene, this.camera);
     },
-    addObject(posX, posY, username) {
+    addObject(posX, posY, username, hitpoints) {
+      this.playersGameObjects[username] = {};
       if (username === this.username) {
-        this.meshes[username] = this.addBox(1, 1, 1, 0, 0, 0);
+        this.playersGameObjects[username].meshChild = this.addBox(1, 1, 1, 0, 0, 0);
       } else {
-        this.meshes[username] = this.addSphere(1, 0, 0, 0);
+        this.playersGameObjects[username].meshChild = this.addSphere(1, 0, 0, 0);
       }
-      this.gameObjects[username] = new Three.Object3D();
-      this.gameObjects[username].position.x = posX;
-      this.gameObjects[username].position.y = posY;
-      this.gameObjects[username].position.z = 0.1;
-      this.gameObjects[username].add(this.meshes[username]);
-      this.scene.add(this.gameObjects[username]);
+      this.playersGameObjects[username].parentObject = new Three.Object3D();
+      this.playersGameObjects[username].parentObject.position.x = posX;
+      this.playersGameObjects[username].parentObject.position.y = posY;
+      this.playersGameObjects[username].parentObject.position.z = 0.1;
+      this.playersGameObjects[username].parentObject.add(this.playersGameObjects[username].meshChild);
+      this.scene.add(this.playersGameObjects[username].parentObject);
       var canvas = document.createElement('canvas');
       canvas.width = 256;
       canvas.height = 256;
-
       var ctx = canvas.getContext('2d');
       ctx.font = '44pt Arial';
       ctx.fillStyle = 'white';
+      if (this.positions[username].charactertype === 'fox') {
+        ctx.fillStyle = 'red';
+      }
       ctx.textAlign = 'center';
       ctx.fillText(username, 128, 44);
       var tex = new Three.Texture(canvas);
       tex.needsUpdate = true;
       var spriteMat = new Three.SpriteMaterial({ map: tex });
-      var sprite = new Three.Sprite(spriteMat);
-      sprite.position.set(0, 1, 0);
-      this.gameObjects[username].add(sprite);
+      this.playersGameObjects[username].textSprite = new Three.Sprite(spriteMat);
+      this.playersGameObjects[username].textSprite.position.set(0, 1, 1);
+      this.playersGameObjects[username].parentObject.add(this.playersGameObjects[username].textSprite);
+      canvas = document.createElement('canvas');
+      this.playersGameObjects[username].healthBarCanvas = canvas;
+      canvas.width = 256;
+      canvas.height = 256;
+      ctx = canvas.getContext('2d');
+      this.playersGameObjects[username].healthBar = this.buildHealthBar(hitpoints, ctx);
+      this.createHealthBarSpriteAndDisplay(username);
+    },
+    buildHealthBar(health, ctx) {
+      const hbwidth = 200;
+      const hbHeight = 30;
+      const x = 0;
+      const y = -2;
+      return new HealthBar(x, y, hbwidth, hbHeight, health, 'green', 'red', ctx);
+    },
+    updateHealthBar(username, health) {
+      if (this.playersGameObjects[username].healthBar.getHealth() !== health) {
+        this.playersGameObjects[username].parentObject.remove(this.playersGameObjects[username].healthBarSprite);
+        this.createHealthBarSpriteAndDisplay(username);
+      }
+    },
+    createHealthBarSpriteAndDisplay(username) {
+      var ctx = this.playersGameObjects[username].healthBarCanvas.getContext('2d');
+      ctx.clearRect(0, 0, 256, 256);
+      this.playersGameObjects[username].healthBar.show();
+      var tex = new Three.Texture(this.playersGameObjects[username].healthBarCanvas);
+      tex.needsUpdate = true;
+      var spriteMat = new Three.SpriteMaterial({ map: tex });
+      this.playersGameObjects[username].healthBarSprite = new Three.Sprite(spriteMat);
+      this.playersGameObjects[username].healthBarSprite.position.set(0.1, -1.5, 1);
+      this.playersGameObjects[username].parentObject.add(this.playersGameObjects[username].healthBarSprite);
     },
     addBox(x, y, z, posX, posY, posZ) {
       this.$showLog && console.log('adding a box');
@@ -180,7 +215,7 @@ export default {
     },
     addBackground(sizeX, sizeY) {
       this.$showLog && console.log('adding background');
-      const geometry = new Three.BoxGeometry(sizeX, sizeY, 0.1);
+      const geometry = new Three.BoxGeometry(sizeX, sizeY, 0);
       const material = new Three.MeshBasicMaterial({
         color: 0x344522,
         wireframe: false

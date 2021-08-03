@@ -64,6 +64,18 @@ func (p *PlayerGameData) getStatusMessage() messaging.CommRoomMessagePlayerStatu
 		HitPoints:        killable.hitPoints,
 		PerformingAction: p.playerInput.actionBehaviour.isPerforming,
 		Velocity:         movement.Velocity,
+		CharacterType:    p.playerCharacterType.String(),
 	}
 	return m
+}
+
+func (c CharacterType) String() string {
+	switch c {
+	case CharacterTypeChicken:
+		return "chicken"
+	case CharacterTypeFox:
+		return "fox"
+	default:
+		return ""
+	}
 }
