@@ -1,4 +1,4 @@
-class HealthBar {
+export default class HealthBar {
   constructor(x, y, w, h, maxHealth, color, emptyColor, context) {
     this.x = x;
     this.y = y;
@@ -31,5 +31,3 @@ class HealthBar {
     return this.health;
   }
 }
-
-export default HealthBar;
